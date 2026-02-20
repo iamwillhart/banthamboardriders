@@ -1,0 +1,314 @@
+---
+/**
+ * ContactForm Slice
+ *
+ * KB RATING: A* (0KB JS — native HTML form)
+ * CARBON TIER: A* (text only, no images)
+ *
+ * Standard contact form (name, email, message) with honeypot spam
+ * protection. Submits to a self-hosted PHPMailer bridge on the
+ * client's Krystal / cPanel server — no third-party SaaS needed.
+ *
+ * ============================================================
+ * 🚀 NEW CLIENT SETUP — follow these steps:
+ * ============================================================
+ *
+ * STEP 1: Form action URL (line ~105)
+ *   Point this at the client's PHP bridge endpoint:
+ *   - "/api/contact.php"           → same domain (Krystal cPanel)
+ *   - "https://mail.example.com/contact.php" → subdomain bridge
+ *   Leave as "#" during local dev (form won't submit anywhere).
+ *
+ * STEP 2: Recipient / form name (line ~106)
+ *   The hidden "form-name" value is passed to the PHP bridge so
+ *   it knows which mailbox to route to. Update per client.
+ *
+ * STEP 3: Extra fields (lines ~148–160)
+ *   Default: Name, Email, Message.
+ *   Uncomment or add fields as needed per project:
+ *   - Phone (type="tel")
+ *   - Company / Organisation
+ *   - Subject (select dropdown)
+ *   - Budget range (select dropdown)
+ *   Keep it minimal — every extra field costs conversions.
+ *
+ * STEP 4: Submit button label (line ~108)
+ *   Default "Send Message". Override from Prismic or hardcode.
+ *
+ * STEP 5: Layout variant (line ~109)
+ *   - "stacked" (default) — heading + description above the form
+ *   - "side-by-side" — heading left, form right on desktop
+ *
+ * STEP 6: Section background (line ~110)
+ *   - "default" — page background
+ *   - "alt" — subtle contrast (great for breaking up long pages)
+ *   - "accent" — bold (rare for forms, but works on short pages)
+ *
+ * ============================================================
+ * 📝 PRISMIC FIELDS — Slice (contact_form)
+ * ============================================================
+ *   Non-repeatable zone (slice.primary):
+ *   - heading (Key Text)       — e.g. "Get in touch"
+ *   - description (Rich Text)  — optional supporting copy
+ *   - submit_label (Key Text)  — button text (fallback: "Send Message")
+ *
+ *   That's it. Keep the CMS simple — the client doesn't need
+ *   to configure form fields, action URLs, or spam settings.
+ *
+ * ============================================================
+ * 📮 FORM HANDLING — PHP Bridge (Krystal / cPanel)
+ * ============================================================
+ *   These sites are hosted SSG on Krystal (Unity reseller).
+ *   Instead of paying £120+/year for Formspree, we use a
+ *   self-hosted PHPMailer script on the server the client
+ *   already owns.
+ *
+ *   The PHP bridge:
+ *   1. Receives the POST from this form
+ *   2. Validates the honeypot (hidden field must be empty)
+ *   3. Rate-limits: max 1 submission per IP per 60 seconds
+ *   4. Sends via SMTP (Google Workspace or Krystal cPanel email)
+ *   5. Returns a redirect or JSON response
+ *
+ *   SMTP credentials live in the PHP script (or .env on server),
+ *   NOT in this Astro codebase. Swap between Google Workspace
+ *   and Krystal email by changing SMTP host/port/credentials.
+ *
+ *   When to add Cloudflare in front:
+ *   - Heavy bot attacks despite honeypot + rate limiter
+ *   - Global audience (not just UK)
+ *   - Need edge caching for high-traffic pages
+ *
+ * ============================================================
+ * 🛡️ SPAM PROTECTION (built in)
+ * ============================================================
+ *   - Honeypot: hidden "website" field (line ~143). Bots fill it,
+ *     humans don't. PHP bridge rejects any submission where
+ *     this field has a value.
+ *   - Rate limiter: 60-second cooldown per IP in the PHP script.
+ *   - No CAPTCHA needed for 99% of small-business sites.
+ *
+ * ============================================================
+ */
+import Section from "../Section.astro";
+import * as prismic from "@prismicio/client";
+import { linkResolver } from "../../lib/prismic";
+
+interface Props {
+  slice: any;
+}
+
+const { slice } = Astro.props;
+
+const { heading, description, submit_label } = slice.primary;
+
+// ============================================================
+// 🎨 DEVELOPER SETTINGS — change these per client
+// ============================================================
+const formAction = "/api/contact.php"; // Step 1: PHP bridge URL // Step 1: PHP bridge URL e.g. "/api/contact.php"
+const formName = "contact"; // Step 2: form identifier for PHP bridge routing
+const submitLabel = submit_label || "Send Message"; // Step 4
+const layout = "stacked" as "stacked" | "side-by-side"; // Step 5
+const sectionBg = "default" as "default" | "alt" | "accent"; // Step 6
+// ============================================================
+
+// Safely render rich text description
+const descriptionHtml =
+  description && Array.isArray(description) && description.length > 0
+    ? prismic.asHTML(description as prismic.RichTextField, { linkResolver })
+    : "";
+---
+
+<Section spacing="default" background={sectionBg} container="narrow">
+  <div class:list={["contact-form", `contact-form--${layout}`]}>
+    {/* Header */}
+    {
+      (heading || descriptionHtml) && (
+        <header class="contact-form__header">
+          {heading && <h2 class="contact-form__heading">{heading}</h2>}
+          {descriptionHtml && (
+            <div
+              class="contact-form__description prose"
+              set:html={descriptionHtml}
+            />
+          )}
+        </header>
+      )
+    }
+    {
+      /* Success message — shown via CSS :target when PHP redirects to #form-success */
+    }
+    <div id="form-success" class="contact-form__success">
+      <p class="contact-form__success-text">Thanks — we'll be in touch soon.</p>
+    </div>
+
+    {/* Form */}
+    <form
+      name={formName}
+      method="POST"
+      action={formAction}
+      class="contact-form__form"
+    >
+      <input type="hidden" name="form-name" value={formName} />
+
+      {
+        /* 🛡️ Honeypot — hidden from humans, bots fill it in.
+          PHP bridge rejects submissions where this has a value.
+          Do NOT remove this field. */
+      }
+      <div
+        class="contact-form__field contact-form__field--alt"
+        aria-hidden="true"
+      >
+        <label for="company">Company</label>
+        <input
+          type="text"
+          id="company"
+          name="company"
+          tabindex="-1"
+          autocomplete="off"
+        />
+      </div>
+
+      {/* Step 3: Core fields — add/remove per project */}
+      <div class="form-group">
+        <label for="name" class="form-label">Name</label>
+        <input type="text" id="name" name="name" required class="form-input" />
+      </div>
+
+      <div class="form-group">
+        <label for="email" class="form-label">Email</label>
+        <input
+          type="email"
+          id="email"
+          name="email"
+          required
+          class="form-input"
+        />
+      </div>
+
+      {/* Step 3: Uncomment for phone field */}
+      {
+        /* <div class="form-group">
+        <label for="phone" class="form-label">Phone <span class="form-optional">(optional)</span></label>
+        <input type="tel" id="phone" name="phone" class="form-input" />
+      </div> */
+      }
+
+      <div class="form-group">
+        <label for="message" class="form-label">Message</label>
+        <textarea id="message" name="message" required class="form-input"
+        ></textarea>
+      </div>
+
+      <button type="submit" class="btn btn--primary">{submitLabel}</button>
+    </form>
+  </div>
+</Section>
+
+<style>
+  /* ============================================================
+     LAYOUT
+     ============================================================ */
+  .contact-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-12);
+  }
+
+  /* Side-by-side variant: header left, form right on desktop */
+  @media (min-width: 768px) {
+    .contact-form--side-by-side {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-16);
+      align-items: start;
+    }
+  }
+
+  /* ============================================================
+     HEADER
+     ============================================================ */
+  .contact-form__header {
+    max-width: 50ch;
+  }
+
+  .contact-form--stacked .contact-form__header {
+    text-align: center;
+    margin-inline: auto;
+  }
+
+  .contact-form__heading {
+    font-family: var(--font-serif);
+    font-size: var(--text-4xl);
+    font-weight: var(--font-medium);
+    margin-bottom: var(--space-4);
+  }
+
+  .contact-form__description {
+    color: var(--color-text-muted);
+  }
+
+  /* ============================================================
+     FORM
+     ============================================================ */
+  .contact-form__form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+  }
+
+  .contact-form__form button {
+    align-self: flex-start;
+  }
+
+  .contact-form--stacked .contact-form__form button {
+    align-self: flex-start;
+  }
+
+  /* Optional field indicator */
+  .form-optional {
+    font-weight: var(--font-regular);
+    color: var(--color-text-muted);
+    text-transform: none;
+    letter-spacing: 0;
+  }
+
+  /* ============================================================
+     SUCCESS MESSAGE — shown via :target (zero JS)
+     ============================================================ */
+  .contact-form__success {
+    display: none;
+    text-align: center;
+    padding: var(--space-8);
+    background-color: var(--color-bg-alt);
+    border: 1px solid var(--color-text-subtle);
+  }
+
+  .contact-form__success:target {
+    display: block;
+  }
+
+  .contact-form__success:target ~ .contact-form__form {
+    display: none;
+  }
+
+  .contact-form__success-text {
+    font-family: var(--font-serif);
+    font-size: var(--text-2xl);
+  }
+
+  /* ============================================================
+     🛡️ HONEYPOT — must be visually hidden but present in DOM
+     ============================================================ */
+  .contact-form__field--alt {
+    position: absolute;
+    left: -9999px;
+    top: -9999px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    opacity: 0;
+    pointer-events: none;
+  }
+</style>

@@ -1,0 +1,321 @@
+---
+/**
+ * HeroSecondary
+ *
+ * KB RATING: A* (0KB JS — pure CSS)
+ * CARBON TIER: A (optional textural image, single load)
+ *
+ * Coloured hero for inner/secondary pages. Solid background with
+ * optional decorative textural PNG overlaid (blobs, scribbles, etc.).
+ * NOT for photo backgrounds — use HeroHomepage for that.
+ *
+ * ============================================================
+ * 🚀 NEW CLIENT SETUP — follow these steps:
+ * ============================================================
+ *
+ * STEP 1: Set height (line ~100)
+ *   Options:
+ *   - "large"  → 85vh (just shy of full screen)
+ *   - "medium" → 65vh (roughly two-thirds)
+ *   - "small"   → 50vh (half screen)
+ *
+ * STEP 2: Set text alignment (line ~101)
+ *   Options: "center" (default) | "left"
+ *
+ * STEP 3: Set max heading width (line ~289)
+ *   Default: 20ch (center) or 22ch (left)
+ *   Wider = more text per line, narrower = more dramatic line breaks
+ *
+ * STEP 4: Textural image opacity,  (line ~221)
+ *   Default: 0.15 — subtle texture
+ *   Range: 0.05 (barely there) to 0.4 (prominent)
+ *
+ * STEP 5: Textural image sizing and rotation and position (line ~227)
+ *   Default: cover (fills section)
+ *   Options: contain (shows full image), auto (natural size)
+ *
+ * ============================================================
+ * 📝 PRISMIC FIELDS — Slice (hero_secondary)
+ * ============================================================
+ *   Non-repeatable zone (slice.primary):
+ *   - heading (Key Text)              — Main H1 text
+ *   - tagline (Key Text)              — Supporting text below heading
+ *   - button_label (Key Text)         — Optional button text
+ *   - button_link (Link)              — Button destination
+ *   - textural_image (Image)           — Optional decorative PNG texture
+ *   - background_colour (Select)      — Section background:
+ *       • "Main" (value: main)
+ *       • "Secondary" (value: secondary)
+ *       • "Accent" (value: accent)
+ *
+ * ============================================================
+ * 🔒 DEV-CONTROLLED (not in Prismic)
+ * ============================================================
+ *   - heroHeight ("large" | "medium" | "small") — Section height
+ *   - textAlignment ("center" | "left")         — Content alignment
+ *
+ * ============================================================
+ *
+ * PAIRS WELL WITH:
+ * - LogoCloud directly after (compact spacing)
+ * - TextProse or TwoColumn below
+ * - Breadcrumbs component above (future)
+ *
+ * NOTES:
+ * - Textural image should be a PNG with transparency
+ * - NOT for photo backgrounds — use HeroHomepage for that
+ * - Button style auto-adapts to background colour
+ */
+import * as prismic from "@prismicio/client";
+import { linkResolver } from "../../lib/prismic";
+
+interface Props {
+  heading: string;
+  tagline?: string;
+  button_label?: string;
+  button_link?: prismic.LinkField;
+  textural_image?: { url?: string; alt?: string };
+  background_colour?: "main" | "secondary" | "accent";
+  // Developer overrides (for direct Astro use)
+  primaryCta?: { label: string; href: string };
+  heroHeight?: "large" | "medium" | "small";
+  textAlignment?: "center" | "left";
+}
+
+const {
+  heading,
+  tagline,
+  button_label,
+  button_link,
+  textural_image,
+  background_colour = "accent",
+  primaryCta: directCta,
+  heroHeight: directHeight,
+  textAlignment: directAlignment,
+} = Astro.props;
+
+// ============================================================
+// 🔒 DEV-CONTROLLED — change these per client
+// ============================================================
+const heroHeight = directHeight || "medium"; // Step 1: "large" (85vh) | "medium" (65vh) | "small" (50vh)
+const textAlignment = directAlignment || "center"; // Step 2: "center" | "left"
+// ============================================================
+
+// Prismic link helper
+const getUrl = (link: any): string => {
+  if (!link) return "#";
+  if (typeof link === "string") return link;
+  return prismic.asLink(link, { linkResolver }) || "#";
+};
+
+// Button: direct format or Prismic format
+const primaryCta =
+  directCta ||
+  (button_label ? { label: button_label, href: getUrl(button_link) } : null);
+
+// Normalize background colour
+const bgValue = String(background_colour || "accent").toLowerCase();
+const bgClass =
+  bgValue === "secondary" ? "alt" : bgValue === "main" ? "default" : "accent";
+
+// Textural image URL (strip Prismic params, re-add format optimization)
+const texturalUrl = textural_image?.url
+  ? `${textural_image.url.split("?")[0]}?auto=format&q=80`
+  : "";
+
+// Button class adapts to background
+const buttonClass =
+  bgClass === "accent" ? "btn btn--secondary-inverted" : "btn btn--secondary";
+---
+
+<section
+  class:list={[
+    "hero-secondary",
+    `hero-secondary--${heroHeight}`,
+    `hero-secondary--bg-${bgClass}`,
+    `hero-secondary--align-${textAlignment}`,
+  ]}
+>
+  {/* Decorative texture layer */}
+  {
+    texturalUrl && (
+      <div class="hero-secondary__textural" aria-hidden="true">
+        <img src={texturalUrl} alt="" loading="eager" decoding="async" />
+      </div>
+    )
+  }
+
+  <div class="hero-secondary__container">
+    <div class="hero-secondary__content">
+      <h1 class="hero-secondary__heading">{heading}</h1>
+      {tagline && <p class="hero-secondary__tagline">{tagline}</p>}
+      {
+        primaryCta && (
+          <div class="hero-secondary__actions">
+            <a href={primaryCta.href} class={buttonClass}>
+              {primaryCta.label}
+            </a>
+          </div>
+        )
+      }
+    </div>
+  </div>
+</section>
+
+<style>
+  /* ============================================================
+     BASE
+     ============================================================ */
+  .hero-secondary {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+    overflow: hidden;
+  }
+
+  /* ============================================================
+     HEIGHT VARIANTS — Step 1
+     ============================================================ */
+  .hero-secondary--large {
+    min-height: 85vh;
+    min-height: 85dvh;
+  }
+
+  .hero-secondary--medium {
+    min-height: 65vh;
+    min-height: 65dvh;
+  }
+
+  .hero-secondary--small {
+    min-height: 50vh;
+    min-height: 50dvh;
+  }
+
+  /* ============================================================
+     BACKGROUND VARIANTS
+     ============================================================ */
+  .hero-secondary--bg-default {
+    background-color: var(--color-bg);
+    color: var(--color-text);
+  }
+
+  .hero-secondary--bg-alt {
+    background-color: var(--color-bg-alt);
+    color: var(--color-text);
+  }
+
+  .hero-secondary--bg-accent {
+    background-color: var(--color-accent);
+    color: var(--color-bg);
+  }
+
+  /* ============================================================
+     TEXTURAL IMAGE — Steps 4 & 5
+     ============================================================ */
+  .hero-secondary__textural {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    left: 0%; /* Step 4: Textural position — 0% to 100% */
+    top: -20%; /* Step 4: Textural position — 0% to 100% */
+    opacity: 0.35; /* Step 4: Textural opacity — 0.05 (subtle) to 0.4 (prominent) */
+  }
+
+  .hero-secondary__textural img {
+    width: 800px; /* Step 5: Textural size — 100% if using cover , and then pick a size if using contain100px to 800px */
+    height: 800px; /* Step 5: Textural size — 100px to 800px */
+    rotate: -40deg; /* Step 5: Textural rotation — 0deg to 360deg */
+    object-fit: contain; /* Step 5: cover | contain | auto */
+  }
+
+  /* ============================================================
+     CONTAINER
+     ============================================================ */
+  .hero-secondary__container {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: var(--container-xl);
+    margin-inline: auto;
+    padding: var(--space-16) var(--gutter);
+  }
+
+  @media (min-width: 768px) {
+    .hero-secondary__container {
+      padding: var(--space-24) var(--gutter-lg);
+    }
+  }
+
+  /* ============================================================
+     CONTENT
+     ============================================================ */
+  .hero-secondary__content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  /* ============================================================
+     TEXT ALIGNMENT — Step 2
+     ============================================================ */
+
+  /* Center */
+  .hero-secondary--align-center {
+    justify-content: center;
+  }
+
+  .hero-secondary--align-center .hero-secondary__content {
+    align-items: center;
+    text-align: center;
+  }
+
+  /* Left */
+  .hero-secondary--align-left {
+    justify-content: flex-start;
+  }
+
+  .hero-secondary--align-left .hero-secondary__content {
+    align-items: flex-start;
+    text-align: left;
+  }
+
+  /* ============================================================
+     TYPOGRAPHY — Step 3: Adjust heading width
+     ============================================================ */
+  .hero-secondary__heading {
+    font-family: var(--font-serif);
+    font-size: clamp(var(--text-4xl), 7vw, var(--text-6xl));
+    font-weight: var(--font-medium);
+    line-height: var(--leading-snug);
+    max-width: 20ch; /* Step 3: Heading width — 15ch (tight) to 30ch (wide) */
+  }
+
+  .hero-secondary--align-left .hero-secondary__heading {
+    max-width: 22ch;
+  }
+
+  .hero-secondary__tagline {
+    font-size: var(--text-lg);
+    line-height: var(--leading-relaxed);
+    opacity: 0.85;
+    max-width: 45ch;
+  }
+
+  @media (min-width: 768px) {
+    .hero-secondary__tagline {
+      font-size: var(--text-xl);
+    }
+  }
+
+  /* ============================================================
+     BUTTON
+     ============================================================ */
+  .hero-secondary__actions {
+    display: flex;
+    gap: var(--space-4);
+    flex-wrap: wrap;
+    margin-top: var(--space-2);
+  }
+</style>

@@ -1,0 +1,111 @@
+---
+interface Props {
+  title: string;
+  description?: string;
+  publishedDate?: string;
+  featuredImage?: string;
+  slug: string;
+}
+
+const { title, description, publishedDate, featuredImage, slug } = Astro.props;
+
+const formattedDate = publishedDate 
+  ? new Date(publishedDate).toLocaleDateString('en-GB', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    })
+  : null;
+---
+
+<article class="blog-card">
+  <a href={`/blog/${slug}`} class="blog-card__link">
+    {featuredImage && (
+      <div class="blog-card__image-wrapper">
+        <img src={featuredImage} alt={title} class="blog-card__image" loading="lazy" />
+      </div>
+    )}
+    <div class="blog-card__content">
+      {formattedDate && (
+        <time class="blog-card__date" datetime={publishedDate}>
+          {formattedDate}
+        </time>
+      )}
+      <h2 class="blog-card__title">{title}</h2>
+      {description && (
+        <p class="blog-card__description">{description}</p>
+      )}
+      <span class="blog-card__cta">Read article →</span>
+    </div>
+  </a>
+</article>
+
+<style>
+  .blog-card {
+    background-color: var(--color-bg-alt);
+    border: 1px solid var(--color-text-subtle);
+    transition: border-color var(--transition-fast), transform var(--transition-fast);
+  }
+
+  .blog-card:hover {
+    border-color: var(--color-text-muted);
+    transform: translateY(-2px);
+  }
+
+  .blog-card__link {
+    display: block;
+    text-decoration: none;
+  }
+
+  .blog-card__image-wrapper {
+    overflow: hidden;
+  }
+
+  .blog-card__image {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    transition: transform var(--transition-base);
+  }
+
+  .blog-card:hover .blog-card__image {
+    transform: scale(1.03);
+  }
+
+  .blog-card__content {
+    padding: var(--space-6);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .blog-card__date {
+    font-family: var(--font-sans);
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-wider);
+    color: var(--color-text-muted);
+  }
+
+  .blog-card__title {
+    font-family: var(--font-serif);
+    font-size: var(--text-xl);
+    font-weight: var(--font-regular);
+    line-height: var(--leading-snug);
+  }
+
+  .blog-card__description {
+    font-size: var(--text-base);
+    color: var(--color-text-muted);
+    line-height: var(--leading-relaxed);
+  }
+
+  .blog-card__cta {
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
+    font-weight: var(--font-medium);
+    color: var(--color-accent);
+    margin-top: var(--space-2);
+  }
+</style>
+

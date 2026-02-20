@@ -1,0 +1,157 @@
+{
+  "id": "settings",
+  "label": "Settings",
+  "format": "custom",
+  "repeatable": false,
+  "status": true,
+  "json": {
+    "Main": {
+      "site_title": {
+        "type": "Text",
+        "config": {
+          "label": "Site Title",
+          "placeholder": "My Company Name"
+        }
+      },
+      "site_description": {
+        "type": "Text",
+        "config": {
+          "label": "Site Description",
+          "placeholder": "Default description for SEO (used when pages don't have one)"
+        }
+      },
+      "logo": {
+        "type": "Image",
+        "config": {
+          "label": "Logo",
+          "constraint": {},
+          "thumbnails": []
+        }
+      },
+      "og_image": {
+        "type": "Image",
+        "config": {
+          "label": "Default Social Image",
+          "constraint": {
+            "width": 1200,
+            "height": 630
+          },
+          "thumbnails": []
+        }
+      }
+    },
+    "Navigation": {
+      "main_navigation": {
+        "type": "Group",
+        "config": {
+          "label": "Main Navigation",
+          "fields": {
+            "label": {
+              "type": "Text",
+              "config": {
+                "label": "Label",
+                "placeholder": "About"
+              }
+            },
+            "link": {
+              "type": "Link",
+              "config": {
+                "label": "Link",
+                "allowTargetBlank": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "Footer": {
+      "footer_text": {
+        "type": "Text",
+        "config": {
+          "label": "Footer Text",
+          "placeholder": "© 2026 Company Name. All rights reserved."
+        }
+      },
+      "footer_navigation": {
+        "type": "Group",
+        "config": {
+          "label": "Footer Navigation",
+          "fields": {
+            "label": {
+              "type": "Text",
+              "config": {
+                "label": "Label",
+                "placeholder": "Privacy Policy"
+              }
+            },
+            "link": {
+              "type": "Link",
+              "config": {
+                "label": "Link",
+                "allowTargetBlank": false
+              }
+            }
+          }
+        }
+      },
+      "social_links": {
+        "type": "Group",
+        "config": {
+          "label": "Social Links",
+          "fields": {
+            "platform": {
+              "type": "Select",
+              "config": {
+                "label": "Platform",
+                "placeholder": "Select platform",
+                "options": [
+                  "Instagram",
+                  "Twitter",
+                  "LinkedIn",
+                  "Facebook",
+                  "YouTube",
+                  "TikTok",
+                  "GitHub",
+                  "Dribbble",
+                  "Behance",
+                  "Other"
+                ]
+              }
+            },
+            "link": {
+              "type": "Link",
+              "config": {
+                "label": "Link",
+                "allowTargetBlank": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "Contact": {
+      "email": {
+        "type": "Text",
+        "config": {
+          "label": "Email Address",
+          "placeholder": "hello@company.com"
+        }
+      },
+      "phone": {
+        "type": "Text",
+        "config": {
+          "label": "Phone Number",
+          "placeholder": "+1 (555) 123-4567"
+        }
+      },
+      "address": {
+        "type": "StructuredText",
+        "config": {
+          "label": "Address",
+          "placeholder": "Street address, city, etc.",
+          "multi": "paragraph"
+        }
+      }
+    }
+  }
+}

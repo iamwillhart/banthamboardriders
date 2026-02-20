@@ -1,0 +1,40 @@
+/* Squarespace Custom CSS - Match booking buttons */
+/* Add this to: Design → Custom CSS */
+
+/* Target the specific blocks */
+#block-yui_3_17_2_1_1767876850267_2362 a,
+#block-f40d728bddb6891506fd a,
+#block-75e3f7dffb5f3cb99094 button {
+  background: white !important;
+  color: black !important;
+  padding: 8px 12px !important;
+  border: 0 !important;
+  border-radius: 4px !important;
+  text-decoration: none !important;
+  display: inline-block !important;
+  font-family: inherit !important;
+  font-size: 1em !important;
+  font-weight: inherit !important;
+  line-height: inherit !important;
+  cursor: pointer !important;
+  box-shadow: none !important;
+  transition: opacity 0.2s ease !important;
+}
+
+/* Hover state for all three */
+#block-yui_3_17_2_1_1767876850267_2362 a:hover,
+#block-f40d728bddb6891506fd a:hover,
+#block-75e3f7dffb5f3cb99094 button:hover {
+  opacity: 0.9 !important;
+  text-decoration: none !important;
+}
+
+/* Center align the button containers */
+#block-yui_3_17_2_1_1767876850267_2362 .sqs-code-container,
+#block-f40d728bddb6891506fd .sqs-code-container,
+#block-75e3f7dffb5f3cb99094 .lightbox-handle-wrapper {
+  text-align: center !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+}

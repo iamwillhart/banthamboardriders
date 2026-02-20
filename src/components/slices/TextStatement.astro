@@ -1,0 +1,150 @@
+---
+/**
+ * TextStatement
+ *
+ * KB RATING: A* (0KB JS — pure CSS)
+ * CARBON TIER: A* (text only)
+ *
+ * Bold intro text for manifestos, opening statements, and impactful
+ * short-form copy. Larger typography with more presence than prose.
+ *
+ * ============================================================
+ * 🚀 NEW CLIENT SETUP — follow these steps:
+ * ============================================================
+ *
+ * STEP 1: Set max-width (line ~83)
+ *   Adjust the character width for your design.
+ *   Recommendation: 45ch–60ch for statement text.
+ *
+ * STEP 2: Set positioning (line ~84)
+ *   - margin-inline: auto           → Centered (default)
+ *   - margin-inline: 0 auto         → Left-biased
+ *   - margin-inline: auto 0         → Right-biased
+ *   - margin-inline: 0              → Flush left
+ *
+ * STEP 3: Adjust typography (lines ~98-102)
+ *   Paragraphs are styled large (h2-sized) for impact.
+ *   Font size, weight, and line-height for the statement feel.
+ *
+ * ============================================================
+ * 📝 PRISMIC FIELDS (client controls in CMS)
+ * ============================================================
+ *   - content (Rich Text) — the statement text
+ *   - background_colour (Select):
+ *       • "Main colour" (value: main) — uses --color-bg
+ *       • "Secondary colour" (value: secondary) — uses --color-bg-alt
+ *       • "Accent colour" (value: accent) — uses --color-accent
+ *
+ * ============================================================
+ */
+import Section from "../Section.astro";
+import * as prismic from "@prismicio/client";
+import { linkResolver } from "../../lib/prismic";
+
+interface Props {
+  content?: any;
+  background_colour?: "main" | "secondary" | "accent";
+  spacing?: "default" | "compact" | "hero";
+}
+
+const {
+  content,
+  background_colour = "main",
+  spacing = "default",
+} = Astro.props;
+
+// Map client-friendly names to Section's background prop
+// Handle both lowercase and capitalized values from Prismic
+const bgValue = String(background_colour || "main").toLowerCase();
+const background =
+  bgValue === "secondary" ? "alt" : bgValue === "accent" ? "accent" : "default";
+
+// Use Prismic's built-in HTML renderer for proper rich text handling
+// Handles bold, italic, links, lists, etc. automatically
+const htmlContent = content ? prismic.asHTML(content, { linkResolver }) : "";
+---
+
+<Section spacing={spacing} background={background} container="default">
+  <div class="text-statement">
+    {
+      htmlContent ? (
+        <div class="text-statement__content" set:html={htmlContent} />
+      ) : (
+        <div class="text-statement__content">
+          <slot />
+        </div>
+      )
+    }
+  </div>
+</Section>
+
+<style>
+  /* ============================================================
+     LAYOUT SETTINGS — adjust per project (Steps 1-2)
+     ============================================================ */
+  .text-statement__content {
+    max-width: var(--container-xl); /* Step 1: Wider for statement text */
+    margin-inline: auto; /* Step 2: Positioning */
+  }
+
+  /* @media (min-width: 768px) {
+    .text-statement__content {
+      max-width: 80ch;            Even wider on desktop
+    }
+  } */
+
+  /* ============================================================
+     TYPOGRAPHY — adjust per project (Step 3)
+     ============================================================ */
+  .text-statement__content :global(p) {
+    font-size: clamp(var(--text-2xl), 3vw, var(--text-3xl));
+    line-height: var(--leading-snug);
+    font-weight: var(--font-regular);
+  }
+
+  .text-statement__content :global(p + p) {
+    margin-top: var(--space-6);
+  }
+
+  /* Headings within statement (rare, but supported) */
+  .text-statement__content :global(h2),
+  .text-statement__content :global(h3),
+  .text-statement__content :global(h4) {
+    font-family: var(--font-serif);
+    font-weight: var(--font-regular);
+    margin-bottom: var(--space-4);
+  }
+
+  .text-statement__content :global(h2) {
+    font-size: var(--text-3xl);
+  }
+
+  .text-statement__content :global(h3) {
+    font-size: var(--text-2xl);
+  }
+
+  /* Remove top margin from first child (prevents double-padding at section start) */
+  .text-statement__content :global(> :first-child) {
+    margin-top: 0;
+  }
+
+  /* Links */
+  .text-statement__content :global(a) {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    transition: opacity var(--transition-fast);
+  }
+
+  .text-statement__content :global(a:hover) {
+    opacity: 0.7;
+  }
+
+  /* Bold & italic */
+  .text-statement__content :global(strong) {
+    font-weight: var(--font-bold);
+  }
+
+  .text-statement__content :global(em) {
+    font-style: italic;
+  }
+</style>

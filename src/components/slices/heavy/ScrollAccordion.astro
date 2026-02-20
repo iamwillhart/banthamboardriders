@@ -1,0 +1,473 @@
+---
+/**
+ * ScrollAccordion
+ *
+ * KB RATING: C (~45KB JS — GSAP + ScrollTrigger)
+ * CARBON TIER: C (use sparingly, high-impact feature only)
+ *
+ * Scroll-driven accordion with sticky headline. Items collapse as you scroll
+ * past them, then titles wipe away. Two-column layout on desktop.
+ *
+ * ============================================================
+ * 🚀 NEW CLIENT SETUP — follow these steps:
+ * ============================================================
+ *
+ * STEP 1: Adjust sticky position (line ~176)
+ *   Default: top: 96px (fixed offset from viewport top)
+ *   Change for different header heights or visual balance.
+ *
+ * STEP 2: Adjust column ratio (line ~145)
+ *   Default: 1fr 1.2fr (headline slightly narrower than items)
+ *   Options: 1fr 1fr (equal), 0.8fr 1fr (headline narrower)
+ *
+ * STEP 3: Customize border style (line ~200)
+ *   Default: 1px solid with subtle opacity
+ *   Options: Remove borders, use accent color, adjust weight
+ *
+ * ============================================================
+ * 📝 PRISMIC FIELDS (client controls in CMS)
+ * ============================================================
+ *   - eyebrow (Key Text) — small label above headline
+ *   - headline (Key Text) — main heading (required)
+ *   - description (Rich Text) — optional supporting text
+ *   - items (Repeatable group):
+ *       • title (Key Text) — item heading (required)
+ *       • content (Rich Text) — item description
+ *   - background_colour (Select):
+ *       • "Main colour" (value: main) — uses --color-bg
+ *       • "Secondary colour" (value: secondary) — uses --color-bg-alt
+ *       • "Accent colour" (value: accent) — uses --color-accent
+ *
+ * ============================================================
+ * 🔧 BEHAVIOUR NOTES
+ * ============================================================
+ *   - Two column layout: sticky headline left, items right
+ *   - Initial buffer before animation starts (~100px scroll)
+ *   - Phase 1: Content collapses for all items EXCEPT the last (1:1 rate)
+ *   - Phase 2: Collapsed titles wipe upward
+ *   - Last item stays fully expanded throughout
+ *   - Animation ends when last item's bottom aligns with heading bottom
+ *   - Mobile: stacked layout, no scroll animation
+ *   - Requires GSAP + ScrollTrigger (~45KB)
+ *
+ * ============================================================
+ */
+import Section from "../../Section.astro";
+import * as prismic from "@prismicio/client";
+import { linkResolver } from "../../../lib/prismic";
+
+interface AccordionItem {
+  title: string;
+  content?: any; // Rich text field
+}
+
+interface Props {
+  eyebrow?: string;
+  headline: string;
+  description?: any; // Rich text field
+  items?: AccordionItem[];
+  background_colour?: "main" | "secondary" | "accent";
+}
+
+const {
+  eyebrow,
+  headline,
+  description,
+  items: rawItems = [],
+  background_colour = "main",
+} = Astro.props;
+
+// Map client-friendly names to Section's background prop
+const bgValue = String(background_colour || "main").toLowerCase();
+const background =
+  bgValue === "secondary" ? "alt" : bgValue === "accent" ? "accent" : "default";
+
+// Filter out empty items
+const items = rawItems.filter((item) => item.title);
+
+// Render rich text description
+const descriptionHtml = description
+  ? prismic.asHTML(description, { linkResolver })
+  : "";
+---
+
+<Section spacing="default" background={background} container="none">
+  <div class="scroll-accordion" data-scroll-accordion>
+    <div class="scroll-accordion__grid">
+      <!-- Left: Sticky heading -->
+      <div class="scroll-accordion__heading" data-accordion-heading>
+        <div class="scroll-accordion__heading-inner">
+          {
+            eyebrow && (
+              <span class="scroll-accordion__eyebrow" data-accordion-eyebrow>
+                {eyebrow}
+              </span>
+            )
+          }
+          <h2 class="scroll-accordion__headline">{headline}</h2>
+          {
+            descriptionHtml && (
+              <div
+                class="scroll-accordion__description"
+                set:html={descriptionHtml}
+              />
+            )
+          }
+        </div>
+      </div>
+
+      <!-- Right: Feature blocks -->
+      <div class="scroll-accordion__features" data-accordion-features>
+        {
+          items.map((item, index) => {
+            // Render rich text content via Prismic
+            const contentHtml = item.content
+              ? prismic.asHTML(item.content, { linkResolver })
+              : "";
+
+            return (
+              <div
+                class:list={[
+                  "feature-block",
+                  { "is-first": index === 0 },
+                  { "is-last": index === items.length - 1 },
+                ]}
+                data-accordion-item
+              >
+                <h3 class="feature-block__title">{item.title}</h3>
+                <div class="feature-block__content" data-accordion-content>
+                  <div set:html={contentHtml} />
+                </div>
+              </div>
+            );
+          })
+        }
+      </div>
+    </div>
+  </div>
+</Section>
+
+<style>
+  /* ============================================================
+     GRID LAYOUT — adjust per project (Step 2)
+     ============================================================ */
+  .scroll-accordion__grid {
+    max-width: var(--container-xl);
+    margin-inline: auto;
+    padding-inline: var(--gutter);
+    display: grid;
+    gap: var(--space-12);
+    align-items: start;
+  }
+
+  @media (min-width: 768px) {
+    .scroll-accordion__grid {
+      grid-template-columns: 1fr 1.2fr; /* Step 2: Column ratio */
+      gap: var(--space-16);
+      padding-inline: var(--gutter-lg);
+    }
+  }
+
+  /* ============================================================
+     LEFT COLUMN — Sticky heading (Step 1)
+     ============================================================ */
+  .scroll-accordion__heading {
+    position: sticky;
+    top: 96px; /* Step 1: Sticky position — fixed value for consistent spacing */
+  }
+
+  @media (max-width: 767px) {
+    .scroll-accordion__heading {
+      position: relative;
+      top: 0;
+    }
+  }
+
+  .scroll-accordion__heading-inner {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .scroll-accordion__eyebrow {
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
+    font-weight: var(--font-medium);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-wider);
+  }
+
+  /* Eyebrow color: accent on default/alt bg, inherit on accent bg */
+  :global(.section:not(.section--bg-accent)) .scroll-accordion__eyebrow {
+    color: var(--color-accent);
+  }
+
+  .scroll-accordion__headline {
+    font-family: var(--font-serif);
+    font-size: clamp(var(--text-3xl), 4vw, var(--text-4xl));
+    font-weight: var(--font-medium);
+    line-height: var(--leading-snug);
+  }
+
+  .scroll-accordion__description {
+    font-size: var(--text-lg);
+    line-height: var(--leading-relaxed);
+    max-width: 40ch;
+    margin-top: var(--space-2);
+  }
+
+  .scroll-accordion__description :global(p) {
+    margin: 0;
+  }
+
+  .scroll-accordion__description :global(p + p) {
+    margin-top: var(--space-4);
+  }
+
+  /* ============================================================
+     RIGHT COLUMN — Feature blocks
+     ============================================================ */
+  .scroll-accordion__features {
+    display: flex;
+    flex-direction: column;
+    align-self: start;
+    /* Will be positioned by JS during animation */
+  }
+
+  /* ============================================================
+     FEATURE BLOCK — borders and spacing (Step 3)
+     ============================================================ */
+  .feature-block {
+    padding-block: var(--space-6);
+    border-bottom: 1px solid currentColor;
+  }
+
+  /* First item gets top border */
+  .feature-block.is-first {
+    border-top: 1px solid currentColor;
+  }
+
+  /* Accent background: lighter borders */
+  :global(.section.section--bg-accent) .feature-block,
+  :global(.section.section--bg-accent) .feature-block.is-first {
+    border-color: rgba(255, 255, 255, 0.25);
+  }
+
+  .feature-block__title {
+    font-family: var(--font-serif);
+    font-size: var(--text-xl);
+    font-weight: var(--font-medium);
+    line-height: var(--leading-snug);
+  }
+
+  .feature-block__content {
+    overflow: hidden;
+  }
+
+  /* Content has margin-top only when visible */
+  .feature-block__content:not(:empty) {
+    margin-top: var(--space-4);
+  }
+
+  .feature-block__content :global(p) {
+    font-size: var(--text-base);
+    line-height: var(--leading-relaxed);
+    max-width: 55ch;
+  }
+
+  .feature-block__content :global(p + p) {
+    margin-top: var(--space-3);
+  }
+
+  /* Links in content */
+  .feature-block__content :global(a) {
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  /* ============================================================
+     MOBILE ADJUSTMENTS
+     ============================================================ */
+  @media (max-width: 767px) {
+    .feature-block {
+      padding-block: var(--space-5);
+    }
+  }
+</style>
+
+<script>
+  import { gsap } from "gsap";
+  import { ScrollTrigger } from "gsap/ScrollTrigger";
+
+  gsap.registerPlugin(ScrollTrigger);
+
+  function initScrollAccordion() {
+    // Only run on desktop
+    if (window.innerWidth < 768) return;
+
+    const accordions = document.querySelectorAll("[data-scroll-accordion]");
+
+    accordions.forEach((accordion) => {
+      const featuresContainer = accordion.querySelector(
+        "[data-accordion-features]",
+      ) as HTMLElement;
+      const items = accordion.querySelectorAll(
+        "[data-accordion-item]",
+      ) as NodeListOf<HTMLElement>;
+      const headingInner = accordion.querySelector(
+        ".scroll-accordion__heading-inner",
+      ) as HTMLElement;
+
+      if (!featuresContainer || !items.length || items.length < 2) return;
+
+      // Kill any existing ScrollTriggers for this accordion
+      ScrollTrigger.getAll().forEach((st) => {
+        if (accordion.contains(st.trigger as Node)) st.kill();
+      });
+
+      // Get items array (excluding the last one for collapse)
+      const itemsArray = Array.from(items);
+      const collapsibleItems = itemsArray.slice(0, -1); // All except last
+      const lastItem = itemsArray[itemsArray.length - 1];
+
+      // Measure content heights for collapsible items only (not the last one)
+      const contentElements: HTMLElement[] = [];
+      const contentHeights: number[] = [];
+      let totalCollapsibleContentHeight = 0;
+
+      collapsibleItems.forEach((item) => {
+        const content = item.querySelector(
+          "[data-accordion-content]",
+        ) as HTMLElement;
+        if (content) {
+          contentElements.push(content);
+          const height = content.offsetHeight;
+          contentHeights.push(height);
+          totalCollapsibleContentHeight += height;
+        }
+      });
+
+      // Calculate collapsed height of items that will collapse (title + padding + border)
+      let collapsedItemsHeight = 0;
+      collapsibleItems.forEach((item) => {
+        const title = item.querySelector(
+          ".feature-block__title",
+        ) as HTMLElement;
+        const paddingBlock =
+          parseFloat(getComputedStyle(item).paddingTop) +
+          parseFloat(getComputedStyle(item).paddingBottom);
+        collapsedItemsHeight += (title?.offsetHeight || 0) + paddingBlock + 1; // +1 for border
+      });
+
+      // Get heading inner height (we want last item's bottom to align with heading inner's bottom)
+      const headingInnerHeight = headingInner?.offsetHeight || 0;
+
+      // Last item stays fully expanded - get its full height
+      const lastItemHeight = lastItem.offsetHeight;
+
+      // Phase 2: Move features up until last item's border-bottom aligns with heading-inner's bottom
+      // The distance is: (collapsed items height) + (last item height) - (heading inner height)
+      // But we only want to scroll away the collapsed titles, keeping last item visible
+      const totalHeightAfterCollapse = collapsedItemsHeight + lastItemHeight;
+      const phase2Distance = Math.max(
+        0,
+        totalHeightAfterCollapse - headingInnerHeight,
+      );
+
+      // Initial buffer before first collapse (gives a moment before animation starts)
+      const initialBuffer = 50; // pixels of scroll before collapse begins
+
+      // Total scroll distance = buffer + Phase 1 (collapse content) + Phase 2 (wipe up)
+      const phase1Duration = totalCollapsibleContentHeight;
+      const phase2Duration = phase2Distance;
+      const totalScrollDistance =
+        initialBuffer + phase1Duration + phase2Duration;
+
+      // Create master timeline
+      const masterTL = gsap.timeline({
+        scrollTrigger: {
+          trigger: accordion,
+          start: "top 96px", // Fixed offset — matches sticky position
+          end: `+=${totalScrollDistance}`,
+          scrub: true, // Exact 1:1 scroll matching
+          pin: featuresContainer, // Pin only the features column
+          pinSpacing: false, // No extra spacing — content flows naturally after pin
+          anticipatePin: 1,
+          invalidateOnRefresh: true,
+        },
+      });
+
+      // Phase 1: Collapse each collapsible item's content sequentially
+      // (Skip the last item - it never collapses)
+      let cumulativeScroll = initialBuffer; // Start after the buffer
+
+      contentElements.forEach((content, index) => {
+        const startProgress = cumulativeScroll / totalScrollDistance;
+        const contentHeight = contentHeights[index];
+        const duration = contentHeight / totalScrollDistance;
+
+        masterTL.to(
+          content,
+          {
+            height: 0,
+            marginTop: 0,
+            duration: duration,
+            ease: "none",
+          },
+          startProgress,
+        );
+
+        cumulativeScroll += contentHeight;
+      });
+
+      // Phase 2: Translate the features container up
+      // This wipes away the collapsed titles until last item's bottom aligns with heading bottom
+      const phase2Start =
+        (initialBuffer + phase1Duration) / totalScrollDistance;
+
+      if (phase2Distance > 0) {
+        masterTL.to(
+          featuresContainer,
+          {
+            y: -phase2Distance,
+            duration: phase2Duration / totalScrollDistance,
+            ease: "none",
+          },
+          phase2Start,
+        );
+      }
+    });
+  }
+
+  // Initialize after layout is settled
+  function init() {
+    // Clear any existing
+    ScrollTrigger.getAll().forEach((st) => st.kill());
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        initScrollAccordion();
+        ScrollTrigger.refresh();
+      });
+    });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
+  } else {
+    init();
+  }
+
+  // Re-init on Astro page transitions
+  document.addEventListener("astro:page-load", init);
+
+  // Refresh on resize (with debounce)
+  let resizeTimeout: ReturnType<typeof setTimeout>;
+  window.addEventListener("resize", () => {
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(() => {
+      // Re-initialize completely on resize since measurements change
+      init();
+    }, 250);
+  });
+</script>

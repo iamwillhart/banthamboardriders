@@ -1,0 +1,52 @@
+# Astro Starter - Project Rules
+
+## Stack
+
+- Framework: Astro 5+
+- Language: TypeScript (strict mode)
+- Styling: Vanilla CSS with CSS custom properties
+- Hosting: Cloudflare Pages (static)
+
+## Styling Approach
+
+- Use CSS custom properties defined in `src/styles/global.css`
+- Prefer scoped `<style>` blocks in components for component-specific styles
+- Use global utility classes from global.css for common patterns
+- No CSS-in-JS or Tailwind — keep it vanilla and readable
+
+## CSS Variables
+
+- Colors: `--color-bg`, `--color-text`, `--color-accent`, etc.
+- Typography: `--text-sm`, `--text-base`, `--font-serif`, etc.
+- Spacing: `--space-1` through `--space-32`
+- Use these consistently rather than hardcoding values
+
+## Component Guidelines
+
+- Use `.astro` components for static content (no client JS)
+- Only add `<script>` tags when interactivity is truly needed
+- For complex interactivity, use React/Vue/Svelte islands sparingly
+- Props interface should be defined with TypeScript `interface Props`
+
+## File Structure
+
+```
+src/
+├── components/    # Reusable Astro components
+├── layouts/       # Page layouts (Layout.astro, BaseLayout.astro)
+├── pages/         # File-based routing
+└── styles/        # Global CSS
+```
+
+## Image Handling
+
+- Use Astro's `<Image>` component for local images
+- For external images (CMS), use `<img>` with proper width/height
+- Always include meaningful alt text
+
+## Performance
+
+- Astro outputs zero JS by default — keep it that way when possible
+- Use `loading="lazy"` for below-fold images
+- Preload critical fonts in Layout.astro head
+

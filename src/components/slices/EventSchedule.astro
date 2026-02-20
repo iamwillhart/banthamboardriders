@@ -1,0 +1,642 @@
+---
+/**
+ * EventSchedule Slice
+ *
+ * KB RATING: A (minimal JS — ~0.5KB inline filter script)
+ * CARBON TIER: A (text-first; images only shown when filtering)
+ *
+ * Poster-style upcoming-events layout with inset border frame.
+ * 4 equal columns on desktop: sidebar (heading, category filters,
+ * description, artwork) + 3 columns of event cards. Zero-dependency
+ * vanilla JS filtering with optional featured-image reveal.
+ *
+ * ============================================================
+ * 🚀 NEW CLIENT SETUP — follow these steps:
+ * ============================================================
+ *
+ * STEP 1: Artwork SVG (line ~175)
+ *   Replace the placeholder <svg> with your client artwork.
+ *   Keep it simple — single-colour SVG works best.
+ *
+ * STEP 2: Event text size (CSS --event-text var, line ~260)
+ *   Default: var(--text-xl)  (20 px)
+ *   Bump to --text-2xl for a bolder poster feel.
+ *
+ * STEP 3: Inset border distance (CSS --inset var, line ~250)
+ *   Default: var(--space-4) on desktop, var(--space-2) on mobile
+ *
+ * STEP 4: Max events to show (line ~95)
+ *   Default: 30
+ *
+ * STEP 5 (optional): Featured images on filter
+ *   Images are shown when a category filter is active.
+ *   To REMOVE featured-image support entirely for a lighter
+ *   carbon footprint, delete or comment out:
+ *     a) The "FEATURED IMAGE" block in the HTML (~line 195)
+ *     b) The ".event-schedule__card-image" CSS rules (~line 360)
+ *   This saves bandwidth — no <img> tags are rendered at all.
+ *
+ * ============================================================
+ * 📝 PRISMIC FIELDS — Slice (event_schedule)
+ * ============================================================
+ *   Non-repeatable zone (slice.primary):
+ *   - heading (Key Text)            — Section title
+ *   - description (Rich Text)       — Optional intro / quote
+ *   - button_label (Key Text)       — e.g. "View all events"
+ *   - button_link (Link)            — Link for button
+ *   - background_colour (Select)    — Main / Secondary / Accent
+ *
+ *   No repeatable zone — events auto-fetched from Event type.
+ *
+ *   Event custom type fields used:
+ *   - title (Key Text)
+ *   - category (Key Text)          — e.g. Training, Social, Competition
+ *   - location (Key Text)
+ *   - start_date_time (Timestamp)
+ *   - featured_image (Image)       — shown only when filtering
+ * ============================================================
+ */
+import Section from "../Section.astro";
+import { client, linkResolver } from "../../lib/prismic";
+import * as prismic from "@prismicio/client";
+import artworkSvg from "../../assets/shell.svg?raw";
+
+interface Props {
+  heading?: string;
+  description?: prismic.RichTextField;
+  button_label?: string;
+  button_link?: prismic.LinkField;
+  background_colour?: string;
+  slice?: any;
+}
+
+const {
+  heading,
+  description,
+  button_label,
+  button_link,
+  background_colour = "accent",
+} = Astro.props;
+
+const bgValue = String(background_colour || "accent").toLowerCase();
+const background =
+  bgValue === "secondary" ? "alt" : bgValue === "accent" ? "accent" : "default";
+
+// Button style: inverted (light) for accent bg, standard (dark) for others
+const btnClass =
+  background === "accent" ? "btn--secondary-inverted" : "btn--secondary";
+
+const descriptionHtml =
+  description && Array.isArray(description) && description.length > 0
+    ? prismic.asHTML(description as prismic.RichTextField, { linkResolver })
+    : "";
+
+const getUrl = (link: any): string => {
+  if (!link) return "#";
+  return prismic.asLink(link, { linkResolver }) || "#";
+};
+
+// ============================================================
+// STEP 4: Max events — hardcoded
+// ============================================================
+const MAX_EVENTS = 30;
+
+// ============================================================
+// Fetch upcoming events
+// ============================================================
+const MONTH_NAMES_SHORT = [
+  "JAN",
+  "FEB",
+  "MAR",
+  "APR",
+  "MAY",
+  "JUN",
+  "JUL",
+  "AUG",
+  "SEP",
+  "OCT",
+  "NOV",
+  "DEC",
+];
+
+let events: any[] = [];
+try {
+  const buildNow = new Date();
+  const allEvents = await client.getAllByType("event", {
+    orderings: [{ field: "my.event.start_date_time", direction: "asc" }],
+  });
+
+  // Two-pass filtering:
+  // 1. Build time (here): remove events already past at build — keeps HTML lean
+  // 2. Client side (script below): hides events that passed between build and visit
+  events = allEvents
+    .filter((e) => {
+      if (!e.data.start_date_time) return false;
+      return new Date(e.data.start_date_time) >= buildNow;
+    })
+    .slice(0, MAX_EVENTS)
+    .map((e) => {
+      const start = new Date(e.data.start_date_time);
+      return {
+        uid: e.uid,
+        url: e.url || `/events/${e.uid}`,
+        title: e.data.title || "Untitled",
+        category: e.data.category || "",
+        location: e.data.location || "",
+        image: e.data.featured_image?.url
+          ? `${e.data.featured_image.url.split("?")[0]}?auto=format&q=75&w=500`
+          : "",
+        imageAlt: e.data.featured_image?.alt || "",
+        monthLabel: MONTH_NAMES_SHORT[start.getMonth()],
+        day: String(start.getDate()).padStart(2, "0"),
+        startDate: e.data.start_date_time, // For client-side cleanup pass
+      };
+    });
+} catch (e) {
+  if (import.meta.env.DEV) {
+    console.warn("EventSchedule: Failed to fetch events.", e);
+  }
+}
+
+// ============================================================
+// Derive categories programmatically from event data
+// ============================================================
+const categories = [...new Set(events.map((e) => e.category).filter(Boolean))];
+---
+
+<Section spacing="none" background={background} container="none">
+  <div class="event-schedule" data-event-schedule>
+    {/* Inset border is rendered via ::before pseudo-element */}
+
+    <div class="event-schedule__layout">
+      {/* ── Column 1: Sidebar ── */}
+      <div class="event-schedule__sidebar">
+        {heading && <h2 class="event-schedule__heading">{heading}</h2>}
+
+        {/* Category filters */}
+        {
+          categories.length > 0 && (
+            <nav
+              class="event-schedule__filters"
+              aria-label="Filter events by category"
+            >
+              <button
+                type="button"
+                class="event-schedule__filter is-active"
+                data-filter="all"
+              >
+                → All
+              </button>
+              {categories.map((cat) => (
+                <button
+                  type="button"
+                  class="event-schedule__filter"
+                  data-filter={cat}
+                >
+                  → {cat}
+                </button>
+              ))}
+            </nav>
+          )
+        }
+
+        {
+          descriptionHtml && (
+            <div
+              class="event-schedule__description"
+              set:html={descriptionHtml}
+            />
+          )
+        }
+
+        {/* STEP 1: Replace src/assets/sunshine.svg with your own artwork */}
+        <div class="event-schedule__artwork" set:html={artworkSvg} />
+      </div>
+
+      {/* ── Columns 2-4: Events ── */}
+      <div class="event-schedule__events" data-events-container>
+        {
+          events.length > 0 ? (
+            events.map((e) => (
+              <a
+                href={e.url}
+                class="event-schedule__card"
+                data-category={e.category}
+                data-start-date={e.startDate}
+              >
+                {/* ── FEATURED IMAGE START ──
+                  To remove for lighter carbon footprint,
+                  delete this entire block down to FEATURED IMAGE END */}
+                {e.image && (
+                  <div class="event-schedule__card-image">
+                    <img
+                      src={e.image}
+                      alt={e.imageAlt}
+                      width="333"
+                      height="500"
+                      loading="lazy"
+                      decoding="async"
+                    />
+                  </div>
+                )}
+                {/* ── FEATURED IMAGE END ── */}
+
+                <span class="event-schedule__date">
+                  {e.monthLabel} {e.day}
+                </span>
+                <span class="event-schedule__title">{e.title}</span>
+                {e.location && (
+                  <span class="event-schedule__location">{e.location}</span>
+                )}
+              </a>
+            ))
+          ) : (
+            <p class="event-schedule__empty">No upcoming events</p>
+          )
+        }
+      </div>
+    </div>
+
+    {/* ── CTA button — bottom-right on desktop, after events on mobile ── */}
+    {
+      button_label && (
+        <a
+          href={getUrl(button_link)}
+          class={`btn ${btnClass} event-schedule__btn`}
+        >
+          {button_label}
+        </a>
+      )
+    }
+  </div>
+</Section>
+
+{/* ── Filter script — ~0.5 KB, vanilla, no dependencies ── */}
+<script>
+  document
+    .querySelectorAll<HTMLElement>("[data-event-schedule]")
+    .forEach((schedule) => {
+      const filters =
+        schedule.querySelectorAll<HTMLButtonElement>("[data-filter]");
+      const cards = schedule.querySelectorAll<HTMLElement>("[data-category]");
+      const container = schedule.querySelector<HTMLElement>(
+        "[data-events-container]",
+      );
+
+      // Filter out past events on page load using browser's current date
+      const now = new Date();
+      now.setHours(0, 0, 0, 0); // Reset to start of day for comparison
+
+      let visibleCount = 0;
+      cards.forEach((card) => {
+        const startDateStr = card.getAttribute("data-start-date");
+        if (startDateStr) {
+          const eventDate = new Date(startDateStr);
+          eventDate.setHours(0, 0, 0, 0);
+          const isPast = eventDate < now;
+          if (isPast) {
+            card.style.display = "none";
+          } else {
+            visibleCount++;
+            // Limit to MAX_EVENTS
+            if (visibleCount > 30) {
+              card.style.display = "none";
+            }
+          }
+        }
+      });
+
+      // Show empty state if no upcoming events
+      if (visibleCount === 0 && container) {
+        // Check if empty message already exists
+        const existingEmpty = container.querySelector(".event-schedule__empty");
+        if (!existingEmpty) {
+          const emptyMsg = document.createElement("p");
+          emptyMsg.className = "event-schedule__empty";
+          emptyMsg.textContent = "No upcoming events";
+          container.appendChild(emptyMsg);
+        }
+      } else if (visibleCount > 0 && container) {
+        // Remove empty message if events are visible
+        const existingEmpty = container.querySelector(".event-schedule__empty");
+        if (existingEmpty) {
+          existingEmpty.remove();
+        }
+      }
+
+      filters.forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const chosen = btn.dataset.filter;
+          const isAll = chosen === "all";
+
+          // Toggle active button
+          filters.forEach((f) => f.classList.remove("is-active"));
+          btn.classList.add("is-active");
+
+          // Toggle filtered state (shows images when a category is active)
+          schedule.classList.toggle("has-filter", !isAll);
+
+          // Show / hide cards (respecting date filter)
+          let filteredCount = 0;
+          cards.forEach((card) => {
+            const startDateStr = card.getAttribute("data-start-date");
+            let isPast = false;
+            if (startDateStr) {
+              const eventDate = new Date(startDateStr);
+              eventDate.setHours(0, 0, 0, 0);
+              isPast = eventDate < now;
+            }
+            const categoryMatch = isAll || card.dataset.category === chosen;
+            const match = !isPast && categoryMatch;
+
+            if (match && filteredCount < 30) {
+              card.style.display = "";
+              filteredCount++;
+            } else {
+              card.style.display = "none";
+            }
+          });
+
+          // Update empty state based on filtered results
+          if (filteredCount === 0 && container) {
+            const existingEmpty = container.querySelector(
+              ".event-schedule__empty",
+            );
+            if (!existingEmpty) {
+              const emptyMsg = document.createElement("p");
+              emptyMsg.className = "event-schedule__empty";
+              emptyMsg.textContent = "No upcoming events";
+              container.appendChild(emptyMsg);
+            }
+          } else if (filteredCount > 0 && container) {
+            const existingEmpty = container.querySelector(
+              ".event-schedule__empty",
+            );
+            if (existingEmpty) {
+              existingEmpty.remove();
+            }
+          }
+        });
+      });
+    });
+</script>
+
+<style>
+  /* ============================================================
+     CUSTOM PROPERTIES — easy per-project tweaks
+     ============================================================ */
+  .event-schedule {
+    --inset: var(--space-2);
+    --frame-pad: var(--space-8);
+    --event-text: var(--text-lg);
+  }
+  @media (min-width: 768px) {
+    .event-schedule {
+      --inset: var(--space-3);
+    }
+  }
+  @media (min-width: 1024px) {
+    .event-schedule {
+      --inset: var(--space-4);
+      --frame-pad: var(--space-10);
+      --event-text: var(--text-xl);
+    }
+  }
+
+  /* ============================================================
+     FRAME — inset border
+     ============================================================ */
+  .event-schedule {
+    position: relative;
+    padding: var(--frame-pad);
+  }
+  .event-schedule::before {
+    content: "";
+    position: absolute;
+    inset: var(--inset);
+    border: 2px solid currentColor;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ============================================================
+     LAYOUT — 4 equal columns on desktop
+     ============================================================ */
+  .event-schedule__layout {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-8);
+  }
+  @media (min-width: 768px) {
+    .event-schedule__layout {
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-6);
+    }
+  }
+  @media (min-width: 1024px) {
+    .event-schedule__layout {
+      grid-template-columns: repeat(4, 1fr);
+      gap: var(--space-6);
+    }
+  }
+
+  /* ============================================================
+     SIDEBAR — column 1
+     ============================================================ */
+  .event-schedule__sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+  }
+  @media (min-width: 1024px) {
+    .event-schedule__sidebar {
+      grid-column: 1;
+      grid-row: 1 / 2;
+    }
+  }
+
+  .event-schedule__heading {
+    font-family: var(--font-serif);
+    font-size: var(--text-2xl);
+    font-weight: var(--font-bold);
+    text-transform: uppercase;
+    line-height: var(--leading-snug);
+    letter-spacing: var(--tracking-wide);
+  }
+  @media (min-width: 1024px) {
+    .event-schedule__heading {
+      font-size: var(--text-3xl);
+    }
+  }
+
+  /* ── Filters ── */
+  .event-schedule__filters {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+  .event-schedule__filter {
+    all: unset;
+    cursor: pointer;
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
+    font-weight: var(--font-medium);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-wider);
+    line-height: var(--leading-normal);
+    opacity: 0.65;
+    transition: opacity var(--transition-fast);
+  }
+  .event-schedule__filter:hover,
+  .event-schedule__filter.is-active {
+    opacity: 1;
+  }
+  .event-schedule__filter.is-active {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    text-decoration-thickness: 1px;
+  }
+
+  /* ── Description (hidden on mobile) ── */
+  .event-schedule__description {
+    display: none;
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
+    line-height: var(--leading-relaxed);
+    opacity: 0.8;
+    max-width: 30ch;
+  }
+  @media (min-width: 768px) {
+    .event-schedule__description {
+      display: block;
+    }
+  }
+
+  /* ── Artwork (hidden on mobile, pushed to bottom on desktop) ── */
+  .event-schedule__artwork {
+    display: none;
+    margin-top: auto;
+    max-width: 180px;
+  }
+  @media (min-width: 768px) {
+    .event-schedule__artwork {
+      display: block;
+    }
+  }
+  .event-schedule__artwork :global(svg),
+  .event-schedule__artwork :global(svg path) {
+    width: 100%;
+    height: auto;
+    fill: currentColor;
+    opacity: 0.85;
+  }
+
+  /* ── CTA button — flows after events on mobile, bottom-right on desktop ── */
+  .event-schedule__btn {
+    position: relative;
+    z-index: 1;
+    margin-top: var(--space-6);
+  }
+  @media (min-width: 1024px) {
+    .event-schedule__btn {
+      position: absolute;
+      bottom: var(--frame-pad);
+      right: var(--frame-pad);
+      margin-top: 0;
+    }
+  }
+
+  /* ============================================================
+     EVENTS — columns 2-4
+     ============================================================ */
+  .event-schedule__events {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-6);
+    align-content: start;
+    margin-top: 0.25rem;
+  }
+  @media (min-width: 768px) {
+    .event-schedule__events {
+      grid-column: 2;
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+  @media (min-width: 1024px) {
+    .event-schedule__events {
+      grid-column: 2 / 5;
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+
+  /* ============================================================
+     CARD — typographic event block
+     ============================================================ */
+  .event-schedule__card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    text-decoration: none;
+    color: inherit;
+    transition: opacity var(--transition-fast);
+  }
+  .event-schedule__card:hover {
+    opacity: 0.7;
+  }
+
+  .event-schedule__date {
+    font-family: var(--font-serif);
+    font-size: var(--event-text);
+    font-weight: var(--font-bold);
+    font-style: italic;
+    text-transform: uppercase;
+    margin-bottom: 0.25rem;
+  }
+  .event-schedule__title {
+    font-family: var(--font-serif);
+    font-size: var(--event-text);
+    text-transform: uppercase;
+    line-height: var(--leading-snug);
+  }
+  .event-schedule__location {
+    font-family: var(--font-serif);
+    font-size: var(--event-text);
+    font-weight: var(--font-regular);
+    text-transform: uppercase;
+    line-height: var(--leading-snug);
+    margin-top: -4px;
+  }
+
+  /* ============================================================
+     FEATURED IMAGE — hidden by default, shown when filtering
+     To remove entirely for lighter carbon: delete this block
+     and the FEATURED IMAGE HTML block above.
+     ============================================================ */
+  .event-schedule__card-image {
+    display: none;
+    overflow: hidden;
+    margin-bottom: var(--space-2);
+  }
+  .event-schedule__card-image img {
+    width: 100%;
+    height: auto;
+    object-fit: cover;
+    aspect-ratio: 4 / 5;
+  }
+  /* When a category filter is active, reveal images */
+  .event-schedule.has-filter .event-schedule__card-image {
+    display: block;
+  }
+
+  /* ============================================================
+     EMPTY STATE
+     ============================================================ */
+  .event-schedule__empty {
+    font-style: italic;
+    opacity: 0.6;
+    padding: var(--space-4) 0;
+    grid-column: 1 / -1;
+  }
+</style>

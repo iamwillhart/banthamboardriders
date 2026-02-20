@@ -1,0 +1,82 @@
+---
+/**
+ * Events Landing Page
+ *
+ * Fetches from a Page document with UID "events" in Prismic.
+ * Build the page using slices — add EventCalendar, EventSchedule,
+ * ImageGallery, or any other slices to compose the page.
+ */
+import Layout from "../../layouts/Layout.astro";
+import Header from "../../components/Header.astro";
+import Footer from "../../components/Footer.astro";
+import SliceZone from "../../components/SliceZone.astro";
+import { client, getSettings } from "../../lib/prismic";
+
+// Fetch the "events" page and settings from Prismic
+let page;
+let slices = [];
+const settings = await getSettings();
+
+try {
+  page = await client.getByUID("page", "events");
+  slices = page.data.body || [];
+} catch (error) {
+  // Page not found — show setup message in dev
+  if (import.meta.env.DEV) {
+    console.warn(
+      'Events page not found. Create a Page document with UID "events" in Prismic.',
+    );
+  }
+}
+
+const title = page?.data?.meta_title || page?.data?.title || "Events";
+const description = page?.data?.meta_description || "";
+const image =
+  page?.data?.meta_image?.url || settings?.data?.default_og_image?.url || "";
+---
+
+<Layout title={title} description={description} image={image}>
+  <Header />
+  <main>
+    {
+      slices.length > 0 ? (
+        <SliceZone slices={slices} />
+      ) : (
+        <section class="section">
+          <div class="container">
+            <div class="setup-message">
+              <h1 class="heading-2">Events</h1>
+              <p class="text-body text-muted">
+                Create a <strong>Page</strong> document with UID{" "}
+                <code>events</code> in Prismic to populate this page. Add an{" "}
+                <code>event_calendar</code> or <code>event_schedule</code> slice
+                to show events.
+              </p>
+            </div>
+          </div>
+        </section>
+      )
+    }
+  </main>
+  <Footer />
+</Layout>
+
+<style>
+  .setup-message {
+    text-align: center;
+    padding: var(--space-16) 0;
+    max-width: 40ch;
+    margin: 0 auto;
+  }
+
+  .setup-message p {
+    margin-top: var(--space-4);
+  }
+
+  .setup-message code {
+    background: var(--color-bg-alt);
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-sm);
+    font-size: var(--text-sm);
+  }
+</style>

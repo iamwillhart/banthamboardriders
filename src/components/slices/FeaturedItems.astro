@@ -1,0 +1,360 @@
+---
+/**
+ * FeaturedItems Slice
+ *
+ * KB RATING: A* (0KB JS — pure CSS)
+ * CARBON TIER: A (images only)
+ *
+ * Displays a grid of hand-picked content items (Projects, Blog Posts,
+ * Team Members, etc.) fetched via Content Relationship. Works with ANY
+ * Prismic custom type that has the shared card fields listed below.
+ *
+ * ============================================================
+ * 🚀 NEW CLIENT SETUP — follow these steps:
+ * ============================================================
+ *
+ * STEP 1: Grid columns (line ~232)
+ *   Default: 3 columns on desktop
+ *   - repeat(2, 1fr)  → 2-up grid (team members, case studies)
+ *   - repeat(3, 1fr)  → 3-up grid (projects, blog posts)
+ *   - repeat(4, 1fr)  → 4-up grid (logo-heavy or small cards)
+ *
+ * STEP 2: Card image aspect ratio (line ~253)
+ *   - aspect-ratio: 4/3    → Landscape (default, great for projects)
+ *   - aspect-ratio: 3/2    → Wider landscape
+ *   - aspect-ratio: 1/1    → Square (team headshots)
+ *   - aspect-ratio: 2/3    → Portrait
+ *
+ * STEP 3: Overlay on hover (line ~278)
+ *   - Keep as-is for portfolio/project sites
+ *   - Remove .card__overlay markup + CSS for blog/editorial sites
+ *
+ * STEP 4: Card fields displayed (lines ~110–125)
+ *   Default shows: image, category, title, excerpt, "Learn more" link.
+ *   Per site you may want to:
+ *   - Swap category for date:  item.data.date
+ *   - Add role for team:       item.data.role
+ *   - Remove excerpt for minimal cards
+ *   - Remove "Learn more" link text
+ *
+ * STEP 5: Link path (line ~100)
+ *   Default: /projects/:uid
+ *   Change to match your routes:
+ *   - /blog/${item.uid}
+ *   - /about/${item.uid}
+ *   - Or use item.url if route resolver is configured
+ *
+ * ============================================================
+ * 📝 PRISMIC FIELDS — Slice (FeaturedItems)
+ * ============================================================
+ *   Non-repeatable zone (slice.primary):
+ *   - heading (Key Text)
+ *   - description (Rich Text)
+ *   - button_label (Key Text)
+ *   - button_link (Link)
+ *
+ *   Repeatable zone (slice.items):
+ *   - project (Content Relationship)
+ *     → Configure to allow: project, blog_post, team_member, etc.
+ *     → If you rename this field's API ID, update the code below (~line 89)
+ *
+ * ============================================================
+ * 📝 PRISMIC FIELDS — Linked Custom Type (Project / Blog Post / etc.)
+ * ============================================================
+ *   These fields must exist ABOVE the slice zone on every content type
+ *   you want to display in this grid:
+ *
+ *   - title (Key Text)           — Card heading
+ *   - excerpt (Key Text)         — Short description (1–2 sentences)
+ *   - featured_image (Image)     — Card thumbnail
+ *   - category (Key Text)        — Optional label (e.g. "Architecture")
+ *
+ *   Optional per-site additions:
+ *   - date (Date)                — For blog posts
+ *   - role (Key Text)            — For team members
+ *
+ * ============================================================
+ */
+import Section from "../Section.astro";
+import { client, linkResolver } from "../../lib/prismic";
+import * as prismic from "@prismicio/client";
+
+interface Props {
+  slice: any;
+}
+
+const { slice } = Astro.props;
+
+const { heading, description, button_label, button_link } = slice.primary;
+
+// Repeatable zone contains the content relationship rows (slice.items, NOT slice.primary)
+// ⚠️ If your content relationship field API ID isn't "project", change it below
+const itemIds = slice.items
+  ?.map((item: any) => item.project?.id)
+  .filter((id: string) => id);
+
+// Fetch linked documents if we have IDs
+let projects: any[] = [];
+if (itemIds && itemIds.length > 0) {
+  try {
+    const response = await client.getAllByIDs(itemIds, {
+      lang: slice.lang,
+    });
+
+    // Preserve the manual ordering set by the editor in Prismic
+    projects = itemIds
+      .map((id: string) => response.find((p: any) => p.id === id))
+      .filter(Boolean);
+  } catch (e) {
+    console.error("Failed to fetch featured items", e);
+  }
+}
+
+// Dynamic grid: 2 items → 2-col, 4 items → 4-col, otherwise 3-col
+const gridCols = projects.length === 2 ? 2 : projects.length === 4 ? 4 : 3;
+
+// Safely render rich text description
+const descriptionHtml =
+  description && Array.isArray(description) && description.length > 0
+    ? prismic.asHTML(description as prismic.RichTextField, { linkResolver })
+    : "";
+
+const getUrl = (link: any) => {
+  return prismic.asLink(link, { linkResolver }) || "#";
+};
+---
+
+<Section spacing="default" background="default" container="wide">
+  <div class="featured-items">
+    {/* Header */}
+    {
+      (heading || descriptionHtml || button_label) && (
+        <div class="featured-items__header">
+          <div class="featured-items__text">
+            {heading && <h2 class="featured-items__heading">{heading}</h2>}
+            {descriptionHtml && (
+              <div
+                class="featured-items__description"
+                set:html={descriptionHtml}
+              />
+            )}
+          </div>
+
+          {button_label && (
+            <div class="featured-items__action">
+              <a href={getUrl(button_link)} class="btn btn--secondary">
+                {button_label}
+              </a>
+            </div>
+          )}
+        </div>
+      )
+    }
+
+    {/* Grid */}
+    {
+      projects.length > 0 && (
+        <div class="featured-items__grid" data-cols={gridCols}>
+          {projects.map((item) => (
+            /* Step 5: Change this path to match your routing */
+            <a href={item.url || `/projects/${item.uid}`} class="card">
+              <div class="card__image-wrapper">
+                {item.data.featured_image?.url ? (
+                  <img
+                    src={`${item.data.featured_image.url.split("?")[0]}?auto=format&q=80&w=800`}
+                    alt={item.data.featured_image.alt || ""}
+                    width={400}
+                    height={300}
+                    class="card__image"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                ) : (
+                  <div class="card__image-placeholder" />
+                )}
+                {/* Step 3: Remove this overlay block for blog/editorial sites */}
+                <div class="card__overlay">
+                  <span class="btn btn--white btn--sm">View Project</span>
+                </div>
+              </div>
+
+              {/* Step 4: Adjust which fields are shown per site */}
+              <div class="card__content">
+                {item.data.category && (
+                  <span class="card__category">{item.data.category}</span>
+                )}
+                <h3 class="card__title">{item.data.title || "Untitled"}</h3>
+                {item.data.excerpt && (
+                  <p class="card__excerpt">{item.data.excerpt}</p>
+                )}
+              </div>
+            </a>
+          ))}
+        </div>
+      )
+    }
+  </div>
+</Section>
+
+<style>
+  .featured-items {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-12);
+  }
+
+  /* Header */
+  .featured-items__header {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+    align-items: flex-start;
+  }
+
+  @media (min-width: 768px) {
+    .featured-items__header {
+      flex-direction: row;
+      justify-content: space-between;
+      align-items: flex-end;
+    }
+  }
+
+  .featured-items__text {
+    max-width: 60ch;
+  }
+
+  .featured-items__heading {
+    font-family: var(--font-serif);
+    font-size: var(--text-4xl);
+    margin-bottom: var(--space-4);
+  }
+
+  /* ============================================================
+     GRID — Step 1: Change columns per project
+     ============================================================ */
+  .featured-items__grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-8);
+  }
+
+  @media (min-width: 768px) {
+    .featured-items__grid[data-cols="2"] {
+      grid-template-columns: repeat(2, 1fr);
+      gap: var(--space-6);
+    }
+
+    .featured-items__grid[data-cols="3"] {
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--space-6);
+    }
+
+    .featured-items__grid[data-cols="4"] {
+      grid-template-columns: repeat(4, 1fr);
+      gap: var(--space-6);
+    }
+  }
+
+  /* Card */
+  .card {
+    display: flex;
+    flex-direction: column;
+    text-decoration: none;
+    color: inherit;
+  }
+
+  /* ============================================================
+     IMAGE — Step 2: Change aspect ratio per project
+     ============================================================ */
+  .card__image-wrapper {
+    position: relative;
+    aspect-ratio: 3/2; /* Step 2: 4/3 landscape, 1/1 square, 2/3 portrait */
+    overflow: hidden;
+  }
+
+  .card__image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform var(--transition-base);
+  }
+
+  .card__image-placeholder {
+    width: 100%;
+    height: 100%;
+  }
+
+  .card:hover .card__image {
+    transform: scale(1.05);
+  }
+
+  /* ============================================================
+     OVERLAY — Step 3: Remove if not needed
+     ============================================================ */
+  .card__overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity var(--transition-fast);
+  }
+
+  .card:hover .card__overlay {
+    opacity: 1;
+  }
+
+  /* Card Content */
+  .card__content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding: var(--space-4) var(--space-4) var(--space-8) var(--space-4);
+  }
+
+  .card__category {
+    font-size: var(--text-sm);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--color-text-subtle);
+    font-weight: var(--font-bold);
+  }
+
+  .card__title {
+    font-family: var(--font-serif);
+    font-size: var(--text-2xl);
+    line-height: var(--leading-snug);
+  }
+
+  .card__excerpt {
+    font-size: var(--text-base);
+    color: var(--color-text-muted);
+    line-height: var(--leading-normal);
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .card__link-text {
+    margin-top: var(--space-4);
+    text-decoration: underline;
+    font-weight: var(--font-medium);
+    font-size: var(--text-sm);
+    display: inline-block;
+  }
+
+  /* Overlay button variants */
+  .btn--white {
+    background: white;
+    color: black;
+    border: none;
+  }
+
+  .btn--sm {
+    padding: var(--space-2) var(--space-4);
+    font-size: var(--text-sm);
+  }
+</style>

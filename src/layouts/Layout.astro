@@ -1,0 +1,56 @@
+---
+import "../styles/global.css";
+import { getSettings } from "../lib/prismic";
+
+// Self-hosted fonts (no render-blocking Google Fonts request)
+import "@fontsource/stack-sans-text/400.css";
+import "@fontsource/stack-sans-text/500.css";
+import "@fontsource/stack-sans-text/700.css";
+
+interface Props {
+  title: string;
+  description?: string;
+  image?: string; // Social share image URL (og:image)
+}
+
+const { title, description, image } = Astro.props;
+
+// Fetch global settings for fallback meta description
+const settings = await getSettings();
+
+// Site-wide fallback — pulled from Prismic Settings document
+const siteDescription = settings?.data?.default_meta_description || "Welcome to our website.";
+const metaDescription = description || siteDescription;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="generator" content={Astro.generator} />
+
+    <!-- SEO -->
+    <title>{title}</title>
+    <meta name="description" content={metaDescription} />
+
+    <!-- Open Graph -->
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={metaDescription} />
+    <meta property="og:type" content="website" />
+    {image && <meta property="og:image" content={image} />}
+
+    <!-- Twitter Card -->
+    <meta
+      name="twitter:card"
+      content={image ? "summary_large_image" : "summary"}
+    />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={metaDescription} />
+    {image && <meta name="twitter:image" content={image} />}
+  </head>
+  <body>
+    <slot />
+  </body>
+</html>

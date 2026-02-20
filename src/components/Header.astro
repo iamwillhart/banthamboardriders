@@ -1,0 +1,755 @@
+---
+/**
+ * Header / Navigation
+ *
+ * KB RATING: A (minimal JS for interactivity)
+ * CARBON TIER: A*
+ *
+ * Responsive header with logo, nav links, and mobile slide-out panel.
+ * Supports multiple scroll behaviors for different page contexts.
+ *
+ * ============================================================
+ * 🚀 NEW CLIENT SETUP — follow these steps:
+ * ============================================================
+ *
+ * STEP 1: Update nav items (line ~55)
+ *   Change the navItems array with your client's pages.
+ *
+ * STEP 2: Update logo (line ~72)
+ *   Replace "Logo" with actual logo text or component.
+ *
+ * STEP 3: Update mobile footer (line ~102)
+ *   Change email/contact info in mobile panel footer.
+ *
+ * STEP 4: Chose between hover and active dot or hover changing opacity on nav items.
+ *
+ * ============================================================
+ * 📝 USAGE EXAMPLES
+ * ============================================================
+ *
+ *   // Hero page (transparent header, hides on scroll down, shows on scroll up)
+ *   <Header variant="transparent" scrollBehavior="hide-on-scroll" />
+ *
+ *   // Hero page (transparent → solid on scroll, stays visible)
+ *   <Header variant="transparent" scrollBehavior="solid-on-scroll" />
+ *
+ *   // Glassmorphism header (frosted blur, always fixed)
+ *   <Header variant="glass" scrollBehavior="hide-on-scroll" />
+ *
+ *   // Inner page (always solid header)
+ *   <Header variant="solid" scrollBehavior="none" />
+ *
+ *   // Quick defaults for common scenarios:
+ *   <Header />  // transparent + hide-on-scroll (best for hero pages)
+ *   <Header variant="solid" />  // solid + no scroll behavior
+ *
+ * ============================================================
+ * 🎨 PROPS
+ * ============================================================
+ *
+ *   variant: "transparent" | "solid" | "glass"
+ *     - transparent: white text, no bg (for dark heroes)
+ *     - solid: dark text on light bg (for regular pages)
+ *     - glass: frosted glass effect with blur (elegant, modern)
+ *
+ *   scrollBehavior: "none" | "solid-on-scroll" | "hide-on-scroll"
+ *     - none: header stays as-is, no scroll effects
+ *     - solid-on-scroll: transparent → solid after 100px scroll
+ *     - hide-on-scroll: hides on scroll down, shows on scroll up (editorial)
+ *
+ * ============================================================
+ * 🧹 SIMPLIFYING FOR A PROJECT
+ * ============================================================
+ *
+ *   If you only need ONE scroll behavior, you can delete:
+ *   1. The unused behavior blocks in initScrollBehavior() (lines ~230-295)
+ *   2. The unused CSS variant styles (search for .header--transparent etc)
+ *   3. Simplify props to just what you need
+ *
+ *   For example, if only using "hide-on-scroll", delete the
+ *   "solid-on-scroll" block from the JS.
+ *
+ * ============================================================
+ */
+import { getSettings } from "../lib/prismic";
+
+interface Props {
+  class?: string;
+  variant?: "transparent" | "solid" | "glass";
+  scrollBehavior?: "none" | "solid-on-scroll" | "hide-on-scroll";
+}
+
+// ============================================================
+// 🎨 DEVELOPER DEFAULTS — change these per client
+// ============================================================
+const {
+  class: className,
+  variant = "transparent", // Options: "transparent" | "solid" | "glass"
+  scrollBehavior = "none", // Options: "none" | "solid-on-scroll" | "hide-on-scroll"
+} = Astro.props;
+
+// Fetch global settings from Prismic
+const settings = await getSettings();
+const siteName = settings?.data?.site_name || "Site Name";
+const headerLogo = settings?.data?.header_logo;
+
+// Navigation items - update these for each project
+const navItems = [
+  { label: "About", href: "/about" },
+  { label: "Projects", href: "/projects" },
+  { label: "Contact", href: "/contact" },
+];
+
+const currentPath = Astro.url.pathname;
+---
+
+<!-- Desktop Navigation -->
+<header
+  class:list={["header", `header--${variant}`, className]}
+  data-scroll-behavior={scrollBehavior}
+  data-initial-variant={variant}
+>
+  <div class="header__container">
+    <div class="header__inner">
+      <!-- Logo -->
+      <a href="/" class="header__logo">
+        {
+          headerLogo?.url ? (
+            <img
+              src={headerLogo.url}
+              alt={headerLogo.alt || siteName}
+              class="header__logo-img"
+              width={headerLogo.dimensions?.width}
+              height={headerLogo.dimensions?.height}
+            />
+          ) : (
+            siteName
+          )
+        }
+      </a>
+      <!-- Desktop Nav Links -->
+      <nav class="header__nav">
+        {
+          navItems.map((item) => (
+            <a
+              href={item.href}
+              class:list={[
+                "header__link",
+                { "is-active": currentPath.startsWith(item.href) },
+              ]}
+            >
+              {item.label}
+            </a>
+          ))
+        }
+      </nav>
+
+      <!-- Mobile Menu Button -->
+      <button
+        class="header__menu-btn"
+        aria-label="Open menu"
+        aria-expanded="false"
+        data-menu-toggle
+      >
+        <div class="header__menu-icon">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+      </button>
+    </div>
+  </div>
+</header>
+
+<!-- Mobile Menu Backdrop -->
+<div class="mobile-backdrop" data-mobile-backdrop></div>
+
+<!-- Mobile Menu Panel -->
+<div class="mobile-panel" data-mobile-panel>
+  <div class="mobile-panel__content">
+    <nav class="mobile-panel__nav">
+      {
+        navItems.map((item, index) => (
+          <a
+            href={item.href}
+            class="mobile-panel__link"
+            data-mobile-link
+            style={`--delay: ${index * 50 + 100}ms`}
+          >
+            {item.label}
+          </a>
+        ))
+      }
+    </nav>
+
+    <div class="mobile-panel__footer" data-mobile-footer>
+      <p>hello@yoursite.com</p>
+    </div>
+  </div>
+</div>
+
+<script>
+  function initNav() {
+    const menuToggle = document.querySelector("[data-menu-toggle]");
+    const mobileBackdrop = document.querySelector("[data-mobile-backdrop]");
+    const mobilePanel = document.querySelector("[data-mobile-panel]");
+    const mobileLinks = document.querySelectorAll("[data-mobile-link]");
+    const mobileFooter = document.querySelector("[data-mobile-footer]");
+
+    if (!menuToggle || !mobilePanel) return;
+
+    const openMenu = () => {
+      menuToggle.setAttribute("aria-expanded", "true");
+      menuToggle.setAttribute("aria-label", "Close menu");
+      mobileBackdrop?.classList.add("is-open");
+      mobilePanel.classList.add("is-open");
+      document.body.style.overflow = "hidden";
+
+      // Trigger staggered animations
+      mobileLinks.forEach((link) => link.classList.add("is-visible"));
+      mobileFooter?.classList.add("is-visible");
+    };
+
+    const closeMenu = () => {
+      menuToggle.setAttribute("aria-expanded", "false");
+      menuToggle.setAttribute("aria-label", "Open menu");
+      mobileBackdrop?.classList.remove("is-open");
+      mobilePanel.classList.remove("is-open");
+      document.body.style.overflow = "";
+
+      // Reset animations
+      mobileLinks.forEach((link) => link.classList.remove("is-visible"));
+      mobileFooter?.classList.remove("is-visible");
+    };
+
+    menuToggle.addEventListener("click", () => {
+      const isOpen = menuToggle.getAttribute("aria-expanded") === "true";
+      isOpen ? closeMenu() : openMenu();
+    });
+
+    mobileBackdrop?.addEventListener("click", closeMenu);
+
+    // Close on link click
+    mobileLinks.forEach((link) => {
+      link.addEventListener("click", closeMenu);
+    });
+
+    // Close on escape
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") closeMenu();
+    });
+  }
+
+  // ============================================================
+  // SCROLL BEHAVIOR HANDLERS
+  // ============================================================
+  function initScrollBehavior() {
+    const header = document.querySelector(
+      "[data-scroll-behavior]",
+    ) as HTMLElement | null;
+    if (!header) return;
+
+    const behavior = header.dataset.scrollBehavior;
+    const initialVariant = header.dataset.initialVariant;
+
+    // Skip if no scroll behavior
+    if (behavior === "none") return;
+
+    const scrollThreshold = 100; // pixels before effects kick in
+    let lastScrollY = window.scrollY;
+    let isHidden = false;
+    let isScrolled = false;
+
+    const updateHeader = () => {
+      const currentScrollY = window.scrollY;
+
+      if (behavior === "solid-on-scroll") {
+        // Transparent → Solid on scroll
+        const shouldBeScrolled = currentScrollY > scrollThreshold;
+
+        if (shouldBeScrolled !== isScrolled) {
+          isScrolled = shouldBeScrolled;
+
+          if (isScrolled) {
+            header.classList.remove("header--transparent");
+            header.classList.add("header--solid", "header--scrolled");
+          } else {
+            header.classList.remove("header--solid", "header--scrolled");
+            header.classList.add("header--transparent");
+          }
+        }
+      }
+
+      if (behavior === "hide-on-scroll") {
+        const scrollDelta = currentScrollY - lastScrollY;
+        const isScrollingDown = scrollDelta > 5;
+        const isScrollingUp = scrollDelta < -5;
+        const isPastThreshold = currentScrollY > scrollThreshold;
+        const isAtTop = currentScrollY === 0;
+
+        // Handle visibility: hide on scroll down, show on scroll up
+        if (isPastThreshold) {
+          if (isScrollingDown && !isHidden) {
+            // Scrolling down — hide immediately (no solid flash)
+            isHidden = true;
+            header.classList.add("header--hidden");
+            // Also mark as scrolled for when it reappears
+            if (!isScrolled) {
+              isScrolled = true;
+              header.classList.remove("header--transparent", "header--glass");
+              header.classList.add("header--solid", "header--scrolled");
+            }
+          } else if (isScrollingUp && isHidden) {
+            // Scrolling up — show with solid background
+            isHidden = false;
+            header.classList.remove("header--hidden");
+            if (!isScrolled) {
+              isScrolled = true;
+              header.classList.remove("header--transparent", "header--glass");
+              header.classList.add("header--solid", "header--scrolled");
+            }
+          }
+        } else {
+          // Near top — always show
+          if (isHidden) {
+            isHidden = false;
+            header.classList.remove("header--hidden");
+          }
+        }
+
+        // Revert to original variant when at very top
+        if (isAtTop && isScrolled) {
+          isScrolled = false;
+          header.classList.remove("header--scrolled");
+          setTimeout(() => {
+            if (window.scrollY === 0) {
+              header.classList.remove("header--solid");
+              if (initialVariant === "transparent") {
+                header.classList.add("header--transparent");
+              } else if (initialVariant === "glass") {
+                header.classList.add("header--glass");
+              }
+            }
+          }, 50);
+        }
+      }
+
+      lastScrollY = currentScrollY;
+    };
+
+    // Check on load
+    updateHeader();
+
+    // Listen to scroll with passive for performance
+    window.addEventListener("scroll", updateHeader, { passive: true });
+  }
+
+  // Initialize
+  initNav();
+  initScrollBehavior();
+
+  // Re-init on Astro page transitions
+  document.addEventListener("astro:page-load", () => {
+    initNav();
+    initScrollBehavior();
+  });
+</script>
+
+<style>
+  /* =========================
+     HEADER - Desktop
+     ========================= */
+  .header {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: var(--z-sticky);
+    transition:
+      background-color var(--transition-base),
+      box-shadow var(--transition-base),
+      transform var(--transition-base);
+  }
+
+  /* Scrolled state: fixed position with solid background */
+  .header--scrolled {
+    position: fixed;
+    background-color: var(--color-bg);
+    box-shadow: var(--shadow-sm);
+  }
+
+  /* Hidden state: slides up off-screen (for hide-on-scroll behavior) */
+  .header--hidden {
+    transform: translateY(-100%);
+  }
+
+  /* ============================================================
+     VARIANT: Glass (frosted blur effect)
+     ============================================================ */
+  .header--glass {
+    position: fixed;
+    backdrop-filter: blur(100px);
+    -webkit-backdrop-filter: blur(100px);
+    background-color: rgba(255, 255, 255, 0.02);
+  }
+
+  .header--glass .header__logo,
+  .header--glass .header__link,
+  .header--glass .header__menu-icon span {
+    color: var(--color-bg);
+  }
+
+  .header--glass .header__menu-icon span {
+    background-color: var(--color-bg);
+  }
+
+  .header--glass .header__link {
+    color: var(--color-bg); /* Full opacity by default */
+  }
+
+  .header--glass .header__link:hover,
+  .header--glass .header__link.is-active {
+    color: rgba(255, 255, 255, 0.7); /* Less opaque on hover */
+  }
+
+  .header--glass .header__link::before {
+    background-color: var(--color-bg); /* White dot */
+  }
+
+  /* Glass → Solid on hover (keep backdrop-filter, solid bg covers it) */
+  .header--glass:hover {
+    background-color: var(--color-bg);
+    border-bottom-color: var(--color-border);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .header--glass:hover .header__logo,
+  .header--glass:hover .header__link {
+    color: var(--color-text);
+  }
+
+  .header--glass:hover .header__link {
+    color: var(--color-text-muted);
+  }
+
+  .header--glass:hover .header__link:hover,
+  .header--glass:hover .header__link.is-active {
+    color: var(--color-text);
+  }
+
+  .header--glass:hover .header__menu-icon span {
+    background-color: var(--color-text);
+  }
+
+  .header__container {
+    width: 100%;
+    padding-inline: var(--gutter);
+  }
+
+  @media (min-width: 768px) {
+    .header__container {
+      padding-inline: var(--gutter-lg);
+    }
+  }
+
+  .header__inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 64px;
+  }
+
+  @media (min-width: 1024px) {
+    .header__inner {
+      height: 80px;
+    }
+  }
+
+  /* Logo */
+  .header__logo {
+    font-family: var(--font-serif);
+    font-size: var(--text-lg);
+    font-weight: var(--font-regular);
+    color: var(--color-text);
+    transition: opacity var(--transition-fast);
+  }
+
+  @media (min-width: 1024px) {
+    .header__logo {
+      font-size: var(--text-xl);
+    }
+  }
+
+  .header__logo:hover {
+    opacity: 0.8;
+  }
+
+  .header__logo-img {
+    display: block;
+    height: 40px;
+    width: auto;
+    object-fit: contain;
+  }
+
+  @media (min-width: 1024px) {
+    .header__logo-img {
+      height: 80px;
+    }
+  }
+
+  /* Variant: Transparent (for dark heroes) */
+  .header--transparent .header__logo,
+  .header--transparent .header__link,
+  .header--transparent .header__menu-icon span {
+    color: var(--color-bg);
+  }
+
+  .header--transparent .header__menu-icon span {
+    background-color: var(--color-bg);
+  }
+
+  .header--transparent .header__link {
+    color: var(--color-bg); /* Full opacity by default */
+  }
+
+  .header--transparent .header__link:hover,
+  .header--transparent .header__link.is-active {
+    color: rgba(255, 255, 255, 0.7); /* Less opaque on hover */
+  }
+
+  .header--transparent .header__link::before {
+    background-color: var(--color-bg); /* White dot on dark hero */
+  }
+
+  /* Desktop Nav */
+  .header__nav {
+    display: none;
+    align-items: center;
+    gap: var(--space-1);
+  }
+
+  @media (min-width: 768px) {
+    .header__nav {
+      display: flex;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .header__nav {
+      gap: var(--space-2);
+    }
+  }
+
+  .header__link {
+    position: relative;
+    padding: var(--space-2) var(--space-3);
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
+    font-weight: var(--font-regular);
+    color: var(--color-text); /* Full opacity by default */
+    border-radius: var(--radius-sm);
+    transition: color var(--transition-fast);
+  }
+
+  @media (min-width: 1024px) {
+    .header__link {
+      font-size: var(--text-base);
+    }
+  }
+
+  .header__link:hover,
+  .header__link.is-active {
+    color: var(--color-text-muted); /* Less opaque on hover */
+  }
+
+  /* Dot indicator — left of text, vertically centered */
+  .header__link::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background-color: currentColor;
+    opacity: 0;
+    transition: opacity var(--transition-fast);
+  }
+
+  .header__link:hover::before,
+  .header__link.is-active::before {
+    opacity: 1;
+  }
+
+  /* =========================
+     MOBILE MENU BUTTON
+     ========================= */
+  .header__menu-btn {
+    position: relative;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: calc(var(--z-modal) + 10);
+  }
+
+  @media (min-width: 768px) {
+    .header__menu-btn {
+      display: none;
+    }
+  }
+
+  .header__menu-icon {
+    position: relative;
+    width: 20px;
+    height: 14px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  .header__menu-icon span {
+    display: block;
+    width: 100%;
+    height: 2px;
+    background-color: var(--color-text);
+    border-radius: 1px;
+    transition: all var(--transition-base);
+    transform-origin: center;
+  }
+
+  /* Hamburger → X transformation */
+  .header__menu-btn[aria-expanded="true"] .header__menu-icon span {
+    background-color: var(--color-text);
+  }
+
+  .header__menu-btn[aria-expanded="true"] .header__menu-icon span:nth-child(1) {
+    transform: translateY(6px) rotate(45deg);
+  }
+
+  .header__menu-btn[aria-expanded="true"] .header__menu-icon span:nth-child(2) {
+    opacity: 0;
+    transform: scale(0);
+  }
+
+  .header__menu-btn[aria-expanded="true"] .header__menu-icon span:nth-child(3) {
+    transform: translateY(-6px) rotate(-45deg);
+  }
+
+  /* =========================
+     MOBILE BACKDROP
+     ========================= */
+  .mobile-backdrop {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    opacity: 0;
+    visibility: hidden;
+    transition:
+      opacity var(--transition-base),
+      visibility var(--transition-base);
+    z-index: var(--z-overlay);
+  }
+
+  @media (min-width: 768px) {
+    .mobile-backdrop {
+      display: none;
+    }
+  }
+
+  .mobile-backdrop.is-open {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  /* =========================
+     MOBILE PANEL
+     ========================= */
+  .mobile-panel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    max-width: 400px;
+    background-color: var(--color-bg-alt);
+    transform: translateX(100%);
+    transition: transform 500ms cubic-bezier(0.16, 1, 0.3, 1);
+    z-index: var(--z-modal);
+  }
+
+  @media (min-width: 768px) {
+    .mobile-panel {
+      display: none;
+    }
+  }
+
+  .mobile-panel.is-open {
+    transform: translateX(0);
+  }
+
+  .mobile-panel__content {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: 96px var(--space-8) var(--space-8);
+  }
+
+  .mobile-panel__nav {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .mobile-panel__link {
+    display: block;
+    padding: var(--space-4) 0;
+    font-family: var(--font-serif);
+    font-size: var(--text-2xl);
+    font-weight: var(--font-regular);
+    color: var(--color-text-muted);
+    border-bottom: 1px solid var(--color-text-subtle);
+    transition:
+      color var(--transition-fast),
+      transform 500ms,
+      opacity 500ms;
+    transform: translateX(32px);
+    opacity: 0;
+    transition-delay: 0ms;
+  }
+
+  .mobile-panel__link:hover {
+    color: var(--color-text);
+  }
+
+  .mobile-panel__link.is-visible {
+    transform: translateX(0);
+    opacity: 1;
+    transition-delay: var(--delay);
+  }
+
+  .mobile-panel__footer {
+    padding-top: var(--space-8);
+    transform: translateY(16px);
+    opacity: 0;
+    transition:
+      transform 500ms,
+      opacity 500ms;
+    transition-delay: 0ms;
+  }
+
+  .mobile-panel__footer.is-visible {
+    transform: translateY(0);
+    opacity: 1;
+    transition-delay: 400ms;
+  }
+
+  .mobile-panel__footer p {
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+  }
+</style>

@@ -1,0 +1,391 @@
+---
+/**
+ * TeamGallery
+ *
+ * KB RATING: A* (0KB JS — pure CSS grid)
+ * CARBON TIER: A (images only, lazy loaded)
+ *
+ * Team member gallery with 2-column grid layout.
+ * Each member has photo, job title with accent marker,
+ * name, and rich text bio.
+ *
+ * ============================================================
+ * 🚀 NEW CLIENT SETUP — follow these steps:
+ * ============================================================
+ *
+ * STEP 1: Image aspect ratio (line 99)
+ *   - "square"    → 1/1 (clean headshots)
+ *   - "landscape" → 3/2 (wider, environmental portraits)
+ *   - "portrait"  → 4/5 (tall, fashion/editorial)
+ *
+ * STEP 2: Gap size (line ~185)
+ *   Default: var(--space-12)
+ *   - var(--space-6)  → Tighter grid
+ *   - var(--space-12) → Comfortable
+ *   - var(--space-16) → Airy, editorial
+ *
+ * STEP 3: Border radius (line 285)
+ *   Default: 0 (sharp/editorial)
+ *   Options: var(--radius-md) for softer look
+ *
+ * STEP 4: Marker style (line ~135)
+ *   Default: "square" — small filled square before job title
+ *   Options: "svg" — inline SVG icon (replace SVG markup below)
+ *
+ * STEP 5: Custom marker SVG (line ~140)
+ *   Replace the SVG string with your own icon.
+ *   Only used when markerStyle = "svg".
+ *   Keep it small (~16×16) and single-colour (uses currentColor via fill).
+ *
+ * ============================================================
+ * 📝 PRISMIC FIELDS — Slice (team_gallery)
+ * ============================================================
+ *   Non-repeatable zone (slice.primary):
+ *   - heading (Key Text)            — Section title
+ *   - description (Rich Text)       — Intro paragraph above grid
+ *   - background_colour (Select)    — Section background:
+ *       • "Main" (value: main)
+ *       • "Secondary" (value: secondary)
+ *       • "Accent" (value: accent)
+ *
+ *   Repeatable zone (slice.items):
+ *   - image (Image)                 — Team member photo (includes alt, dimensions)
+ *   - job_title (Key Text)          — Role / position
+ *   - name (Key Text)               — Person's full name
+ *   - bio (Rich Text)               — Short biography
+ *
+ * ============================================================
+ * 🔒 DEV-CONTROLLED (not in Prismic)
+ * ============================================================
+ *   - aspectRatio (square | landscape | portrait) — Image crop, line ~130
+ *   - markerStyle ("square" | "svg")              — Marker before job title, line ~135
+ *   - markerSvg (string)                          — Custom SVG markup, line ~140
+ *
+ * ============================================================
+ */
+import Section from "../Section.astro";
+import * as prismic from "@prismicio/client";
+import { linkResolver } from "../../lib/prismic";
+
+interface TeamMember {
+  image?: {
+    url?: string;
+    alt?: string;
+    dimensions?: { width: number; height: number };
+  };
+  job_title?: string;
+  name?: string;
+  bio?: prismic.RichTextField;
+}
+
+interface Props {
+  heading?: string;
+  description?: prismic.RichTextField;
+  background_colour?: "main" | "secondary" | "accent";
+  items?: TeamMember[];
+  slice?: any;
+}
+
+const {
+  heading,
+  description,
+  background_colour = "main",
+  items = [],
+} = Astro.props;
+
+// ============================================================
+// 🔒 DEV-CONTROLLED — change these per project
+// ============================================================
+const aspectRatio: "square" | "landscape" | "portrait" = "square"; // Step 1: Image aspect ratio
+const markerStyle: "square" | "svg" = "square"; // Step 4: Marker style
+// Step 5: Custom marker SVG — replace with your own icon
+// Keep viewBox and use `currentColor` for fill so it inherits the marker colour
+const markerSvg = `<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><rect width="16" height="16" rx="2"/></svg>`;
+
+// Normalize background
+const bgValue = String(background_colour || "main").toLowerCase();
+const background =
+  bgValue === "secondary" ? "alt" : bgValue === "accent" ? "accent" : "default";
+
+// Marker colour logic:
+// main/secondary bg → accent colour marker
+// accent bg → secondary colour marker, text becomes --color-bg
+const isAccentBg = bgValue === "accent";
+
+// Render rich text description
+const descriptionHtml =
+  description && Array.isArray(description) && description.length > 0
+    ? prismic.asHTML(description as prismic.RichTextField, { linkResolver })
+    : "";
+
+// Generate srcset for responsive images (Prismic imgix)
+const generateSrcset = (url: string) => {
+  if (!url) return "";
+  const baseUrl = url.split("?")[0];
+  return `${baseUrl}?w=400&auto=format 400w, ${baseUrl}?w=600&auto=format 600w, ${baseUrl}?w=900&auto=format 900w`;
+};
+
+// Normalize and filter team members
+const teamMembers = (items || [])
+  .map((item: TeamMember) => ({
+    src: item.image?.url || "",
+    alt: item.image?.alt || "",
+    width: item.image?.dimensions?.width,
+    height: item.image?.dimensions?.height,
+    srcset: generateSrcset(item.image?.url || ""),
+    jobTitle: item.job_title || "",
+    name: item.name || "",
+    bioHtml:
+      item.bio && Array.isArray(item.bio) && item.bio.length > 0
+        ? prismic.asHTML(item.bio as prismic.RichTextField, { linkResolver })
+        : "",
+  }))
+  .filter((member) => member.src || member.name);
+---
+
+<Section spacing="default" background={background} container="default">
+  <div class:list={["team-gallery", isAccentBg && "team-gallery--accent-bg"]}>
+    {/* Header */}
+    {
+      (heading || descriptionHtml) && (
+        <div class="team-gallery__header">
+          {heading && <h2 class="team-gallery__heading">{heading}</h2>}
+          {descriptionHtml && (
+            <div class="team-gallery__description" set:html={descriptionHtml} />
+          )}
+        </div>
+      )
+    }
+
+    {/* Grid */}
+    {
+      teamMembers.length > 0 && (
+        <div class="team-gallery__grid">
+          {teamMembers.map((member) => (
+            <div class="team-gallery__member">
+              {member.src && (
+                <div
+                  class:list={[
+                    "team-gallery__image-wrapper",
+                    `team-gallery__image-wrapper--${aspectRatio}`,
+                  ]}
+                >
+                  <img
+                    src={member.src}
+                    srcset={member.srcset}
+                    sizes="(min-width: 768px) 50vw, 100vw"
+                    alt={member.alt}
+                    width={member.width}
+                    height={member.height}
+                    loading="lazy"
+                    decoding="async"
+                    class="team-gallery__image"
+                  />
+                </div>
+              )}
+              <div class="team-gallery__info">
+                {member.jobTitle && (
+                  <div class="team-gallery__role">
+                    <span class="team-gallery__marker" aria-hidden="true">
+                      {markerStyle === "svg" ? (
+                        <Fragment set:html={markerSvg} />
+                      ) : (
+                        <span class="team-gallery__marker-square" />
+                      )}
+                    </span>
+                    <span class="team-gallery__job-title">
+                      {member.jobTitle}
+                    </span>
+                  </div>
+                )}
+                {member.name && (
+                  <h3 class="team-gallery__name">{member.name}</h3>
+                )}
+                {member.bioHtml && (
+                  <div class="team-gallery__bio" set:html={member.bioHtml} />
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )
+    }
+  </div>
+</Section>
+
+<style>
+  /* ============================================================
+     BASE
+     ============================================================ */
+  .team-gallery {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-12);
+  }
+
+  /* ============================================================
+     HEADER
+     ============================================================ */
+  .team-gallery__header {
+    max-width: 60ch;
+  }
+
+  .team-gallery__heading {
+    font-family: var(--font-serif);
+    font-size: var(--text-4xl);
+    line-height: var(--leading-snug);
+    margin-bottom: var(--space-4);
+  }
+
+  .team-gallery__description {
+    font-size: var(--text-lg);
+    line-height: var(--leading-relaxed);
+    color: var(--color-text-muted);
+  }
+
+  /* ============================================================
+     GRID — 1-col mobile, 2-col desktop (Step 2: gap)
+     ============================================================ */
+  .team-gallery__grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-12); /* Step 2: Gap size - mobile*/
+  }
+
+  @media (min-width: 768px) {
+    .team-gallery__grid {
+      grid-template-columns: repeat(2, 1fr);
+      gap: var(--space-24); /* Step 2: Gap size - desktop */
+    }
+  }
+
+  /* ============================================================
+     MEMBER CARD
+     ============================================================ */
+  .team-gallery__member {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-6); /* Step 2: Gap size - mobile */
+  }
+
+  @media (min-width: 768px) {
+    .team-gallery__member {
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-12); /* Step 2: Gap size - desktop */
+      align-items: start;
+    }
+  }
+
+  /* ============================================================
+     IMAGE — Step 1 & Step 3: Aspect ratio + border radius
+     ============================================================ */
+  .team-gallery__image-wrapper {
+    position: relative;
+    overflow: hidden;
+    border-radius: 0; /* Step 3: Border radius — var(--radius-md) for softer */
+  }
+
+  /* Step 1: Aspect ratios */
+  .team-gallery__image-wrapper--square {
+    aspect-ratio: 1 / 1;
+  }
+
+  .team-gallery__image-wrapper--landscape {
+    aspect-ratio: 3 / 2;
+  }
+
+  .team-gallery__image-wrapper--portrait {
+    aspect-ratio: 4 / 5;
+  }
+
+  .team-gallery__image {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  /* ============================================================
+     INFO
+     ============================================================ */
+  .team-gallery__info {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    padding-top: var(--space-2);
+  }
+
+  /* ============================================================
+     ROLE — marker + job title
+     ============================================================ */
+  .team-gallery__role {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+
+  /* Square marker (default) */
+  .team-gallery__marker-square {
+    display: block;
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    background-color: var(--color-accent);
+  }
+
+  /* Accent bg → marker uses secondary colour */
+  .team-gallery--accent-bg .team-gallery__marker-square {
+    background-color: var(--color-bg-alt);
+  }
+
+  /* SVG marker inherits colour via currentColor */
+  .team-gallery__marker {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    color: var(--color-accent);
+  }
+
+  .team-gallery--accent-bg .team-gallery__marker {
+    color: var(--color-bg-alt);
+  }
+
+  .team-gallery__job-title {
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
+    font-weight: var(--font-medium);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-wider);
+  }
+
+  /* ============================================================
+     NAME
+     ============================================================ */
+  .team-gallery__name {
+    font-family: var(--font-serif);
+    font-size: clamp(var(--text-xl), 3vw, var(--text-3xl));
+    line-height: var(--leading-snug);
+    letter-spacing: var(--tracking-tight);
+  }
+
+  /* ============================================================
+     BIO
+     ============================================================ */
+  .team-gallery__bio {
+    font-size: var(--text-base);
+    line-height: var(--leading-relaxed);
+    color: var(--color-text-muted);
+  }
+
+  /* On accent bg, use --color-bg for text (set by Section) —
+     muted text should also be lighter */
+  .team-gallery--accent-bg .team-gallery__bio {
+    color: inherit;
+    opacity: 0.8;
+  }
+
+  .team-gallery--accent-bg .team-gallery__description {
+    color: inherit;
+    opacity: 0.8;
+  }
+</style>

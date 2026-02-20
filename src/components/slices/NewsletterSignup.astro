@@ -1,0 +1,319 @@
+---
+/**
+ * NewsletterSignup
+ *
+ * KB RATING: A* (0KB JS — native HTML form)
+ * CARBON TIER: A* (text only, no images)
+ *
+ * Minimal email capture — one text line, one input, one button.
+ * Service-agnostic: ships as a plain HTML form that POSTs to
+ * whatever endpoint you wire up per client.
+ *
+ * ============================================================
+ * 🚀 NEW CLIENT SETUP — follow these steps:
+ * ============================================================
+ *
+ * STEP 1: Form action URL (line ~100)
+ *   Where the form POSTs to. Options per service:
+ *   - "/api/newsletter.php"                → self-hosted PHP bridge (Krystal / cPanel)
+ *   - "/api/subscribe"                     → Astro SSR API route (Mailchimp, Kit, etc.)
+ *   - "https://buttondown.com/api/emails/embed-subscribe/YOUR_ID" → Buttondown
+ *   - "#"                                  → disabled (local dev)
+ *
+ * STEP 2: Form name / identifier (line ~101)
+ *   Passed as a hidden field so your backend knows which form
+ *   submitted. Useful when the PHP bridge handles multiple forms.
+ *
+ * STEP 3: Submit button label (line ~102)
+ *   Default: "Send". Override from Prismic or hardcode per client.
+ *
+ * STEP 4: Layout variant (line ~103)
+ *   - "centered" (default) — everything centred, like the screenshot
+ *   - "inline"             — description left, form right on desktop
+ *
+ * STEP 5: Section background
+ *   Driven by Prismic `background_colour` field (main / secondary / accent).
+ *
+ * ============================================================
+ * 📝 PRISMIC FIELDS — Slice (newsletter_signup)
+ * ============================================================
+ *   Non-repeatable zone (slice.primary):
+ *   - description (Key Text)        — line of text above the form
+ *   - placeholder (Key Text)        — input placeholder text
+ *   - submit_label (Key Text)       — button text (fallback: "Send")
+ *   - background_colour (Select)    — Section background:
+ *       • "Main" (value: main)
+ *       • "Secondary" (value: secondary)
+ *       • "Accent" (value: accent)
+ *
+ *   No repeatable zone needed.
+ *
+ * ============================================================
+ * 🔒 DEV-CONTROLLED (not in Prismic)
+ * ============================================================
+ *   - formAction (string)                    — POST endpoint, line ~100
+ *   - formName (string)                      — hidden form identifier, line ~101
+ *   - layout ("centered" | "inline")         — visual layout, line ~103
+ *
+ * ============================================================
+ * 📮 CONNECTING TO EMAIL SERVICES
+ * ============================================================
+ *   This component is intentionally service-agnostic. Point
+ *   `formAction` at whatever backend your client uses:
+ *
+ *   ▸ Self-hosted PHP bridge (Krystal / cPanel)
+ *     Same setup as ContactForm. PHP script receives the POST,
+ *     validates honeypot, and adds the email to a CSV / forwards
+ *     to the client's inbox. Zero ongoing cost.
+ *
+ *   ▸ Mailchimp (via Astro SSR API route)
+ *     Create `src/pages/api/subscribe.ts` with `export const prerender = false`.
+ *     POST to Mailchimp's `/lists/{list_id}/members` endpoint.
+ *     Needs MAILCHIMP_API_KEY, MAILCHIMP_SERVER_PREFIX, MAILCHIMP_LIST_ID
+ *     in .env. See project docs for a starter route.
+ *
+ *   ▸ Kit (formerly ConvertKit)
+ *     POST to `https://api.convertkit.com/v3/forms/{form_id}/subscribe`
+ *     with `{ api_key, email }`. Can be done from a thin API route
+ *     or even client-side (their API key is public).
+ *
+ *   ▸ Buttondown
+ *     Set formAction directly to their embed endpoint:
+ *     "https://buttondown.com/api/emails/embed-subscribe/YOUR_USERNAME"
+ *     No API route needed — native HTML form works out of the box.
+ *
+ *   ▸ Zapier / Make webhook
+ *     Create a Zap with "Webhooks by Zapier" trigger (Catch Hook).
+ *     Set formAction to the webhook URL. Zapier routes the email
+ *     to Mailchimp, Notion, Google Sheets, etc. Quick and flexible.
+ *
+ *   ▸ Netlify Forms (if hosted on Netlify)
+ *     Add `data-netlify="true"` to the <form>. Netlify auto-detects
+ *     and stores submissions. Free tier: 100 submissions/month.
+ *
+ * ============================================================
+ */
+import Section from "../Section.astro";
+
+interface Props {
+  description?: string;
+  placeholder?: string;
+  submit_label?: string;
+  background_colour?: "main" | "secondary" | "accent";
+  slice?: any;
+}
+
+const {
+  description,
+  placeholder,
+  submit_label,
+  background_colour = "main",
+} = Astro.props;
+
+// ============================================================
+// 🔒 DEV-CONTROLLED — change these per client
+// ============================================================
+const formAction = "/api/newsletter.php"; // Step 1: POST endpoint
+const formName = "newsletter"; // Step 2: form identifier
+const submitLabel = submit_label || "Send"; // Step 3: button text
+const layout: "centered" | "inline" = "centered"; // Step 4: layout variant
+// ============================================================
+
+// Normalize background
+const bgValue = String(background_colour || "main").toLowerCase();
+const background =
+  bgValue === "secondary" ? "alt" : bgValue === "accent" ? "accent" : "default";
+
+const isAccentBg = bgValue === "accent";
+
+// Defaults
+const descriptionText = description || "";
+const placeholderText = placeholder || "Join our mailing list";
+---
+
+<Section spacing="default" background={background} container="narrow">
+  <div
+    class:list={[
+      "newsletter",
+      `newsletter--${layout}`,
+      isAccentBg && "newsletter--accent-bg",
+    ]}
+  >
+    {/* Description */}
+    {
+      descriptionText && (
+        <p class="newsletter__description">{descriptionText}</p>
+      )
+    }
+
+    {/* Success / Error — shown via CSS :target when PHP redirects back */}
+    <div
+      id="newsletter-success"
+      class="newsletter__message newsletter__message--success"
+    >
+      <p>Thanks — you're on the list.</p>
+    </div>
+    <div
+      id="newsletter-error"
+      class="newsletter__message newsletter__message--error"
+    >
+      <p>Something went wrong — please try again.</p>
+    </div>
+
+    {/* Form */}
+    <form
+      name={formName}
+      method="POST"
+      action={formAction}
+      class="newsletter__form"
+    >
+      <input type="hidden" name="form-name" value={formName} />
+
+      {
+        /* 🛡️ Honeypot — hidden from humans, bots fill it in.
+          Backend should reject submissions where this has a value. */
+      }
+      <div class="newsletter__field--alt" aria-hidden="true">
+        <label for="newsletter-website">Website</label>
+        <input
+          type="text"
+          id="newsletter-website"
+          name="website"
+          tabindex="-1"
+          autocomplete="off"
+        />
+      </div>
+
+      <input
+        type="email"
+        name="email"
+        placeholder={placeholderText}
+        required
+        class="newsletter__input"
+      />
+      <button type="submit" class="btn btn--primary">{submitLabel}</button>
+    </form>
+  </div>
+</Section>
+
+<style>
+  /* ============================================================
+     BASE
+     ============================================================ */
+  .newsletter {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: var(--space-8);
+  }
+
+  /* ============================================================
+     LAYOUT — Step 4
+     ============================================================ */
+
+  /* Centered (default) — everything stacked centre */
+  .newsletter--centered {
+    align-items: center;
+    text-align: center;
+  }
+
+  /* Inline — description left, form right on desktop */
+  .newsletter--inline {
+    align-items: center;
+    text-align: center;
+  }
+
+  @media (min-width: 768px) {
+    .newsletter--inline {
+      flex-direction: row;
+      justify-content: space-between;
+      text-align: left;
+      gap: var(--space-12);
+    }
+  }
+
+  /* ============================================================
+     DESCRIPTION
+     ============================================================ */
+  .newsletter__description {
+    font-family: var(--font-serif);
+    font-size: var(--text-lg);
+    line-height: var(--leading-relaxed);
+    max-width: 50ch;
+  }
+
+  /* Accent bg — softer text */
+  .newsletter--accent-bg .newsletter__description {
+    color: inherit;
+    opacity: 0.85;
+  }
+
+  /* ============================================================
+     FORM
+     ============================================================ */
+  .newsletter__form {
+    display: flex;
+    gap: var(--space-3);
+    width: 100%;
+    max-width: 500px;
+  }
+
+  .newsletter__input {
+    flex: 1;
+    font-family: var(--font-serif);
+    font-size: var(--text-base);
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid var(--color-text-subtle);
+    background: var(--color-bg);
+    color: var(--color-text);
+  }
+
+  .newsletter__input::placeholder {
+    color: var(--color-text-muted);
+    font-style: italic;
+  }
+
+  .newsletter__input:focus {
+    outline: 2px solid var(--color-accent);
+    outline-offset: -1px;
+    border-color: transparent;
+  }
+
+  /* Accent bg — input keeps light background */
+  .newsletter--accent-bg .newsletter__input {
+    border-color: transparent;
+  }
+
+  /* ============================================================
+     🛡️ HONEYPOT — must be visually hidden but present in DOM
+     ============================================================ */
+  .newsletter__field--alt {
+    position: absolute;
+    left: -9999px;
+    top: -9999px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  /* ============================================================
+     SUCCESS / ERROR — shown via :target (zero JS)
+     ============================================================ */
+  .newsletter__message {
+    display: none;
+    padding: var(--space-6);
+    font-family: var(--font-serif);
+    font-size: var(--text-lg);
+  }
+
+  .newsletter__message:target {
+    display: block;
+  }
+
+  .newsletter__message:target ~ .newsletter__form {
+    display: none;
+  }
+</style>

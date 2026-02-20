@@ -1,0 +1,312 @@
+---
+/**
+ * HeroHomepage
+ *
+ * KB RATING: A* (0KB JS — pure CSS)
+ * CARBON TIER: A (image-heavy, but single image load)
+ *
+ * Full-viewport hero with background image and text overlay.
+ * Perfect for landing pages and dramatic opening statements.
+ *
+ * ============================================================
+ * 🚀 NEW CLIENT SETUP — follow these steps:
+ * ============================================================
+ *
+ * STEP 1: Set position (line ~93)
+ *   Change "bottom-left" to your chosen position.
+ *   Options: "bottom-left" | "left" | "center" | "right" | "bottom-right"
+ *
+ * STEP 2: Set height (line ~94)
+ *   Change "large" to your chosen height.
+ *   Options: "large" (90vh) | "full" (100vh) | "medium" (70vh)
+ *
+ * STEP 3: Set overlay darkness (line ~96)
+ *   Change 40 to your chosen opacity (0-100).
+ *   Light images need higher (50-60), dark images need lower (20-30).
+ *
+ * STEP 4: Set container width (line ~97)
+ *   Options: "full" (text aligns with nav) | "contained" (1200px, matches other slices)
+ *
+ * STEP 5: Update CSS to match (bottom of file)
+ *   Only ONE position variant should be active in CSS.
+ *   Only ONE height variant should be active in CSS.
+ *   Delete or comment out the variants you're not using.
+ *
+ * ============================================================
+ * 📝 PRISMIC FIELDS (client controls in CMS)
+ * ============================================================
+ *   - heading (Key Text) — main H1 text
+ *   - tagline (Key Text) — supporting text
+ *   - image (Image) — background image
+ *   - button_label (Key Text) — button text
+ *   - button_link (Link) — button destination
+ *
+ * ============================================================
+ */
+import { linkResolver } from "../../lib/prismic";
+import * as prismic from "@prismicio/client";
+
+interface Props {
+  // Prismic fields
+  heading: string;
+  tagline?: string;
+  image?: { url?: string; alt?: string };
+  button_label?: string;
+  button_link?: { url?: string } | string;
+  // Developer overrides (for direct Astro use, rare)
+  primaryCta?: { label: string; href: string };
+  secondaryCta?: { label: string; href: string };
+  contentPosition?:
+    | "left"
+    | "center"
+    | "right"
+    | "bottom-left"
+    | "bottom-right";
+  overlayOpacity?: number;
+  minHeight?: "full" | "large" | "medium";
+  containerWidth?: "full" | "contained";
+}
+
+const {
+  heading,
+  tagline,
+  image: prismicImage,
+  button_label,
+  button_link,
+  primaryCta: directCta,
+  secondaryCta,
+  contentPosition: directPosition,
+  overlayOpacity: directOverlay,
+  minHeight: directHeight,
+  containerWidth: directContainerWidth,
+} = Astro.props;
+
+// Prismic Link fields are objects { url: "..." }, not strings — extract the URL
+const getUrl = (link: any): string => {
+  if (!link) return "#";
+  if (typeof link === "string") return link;
+  return prismic.asLink(link, { linkResolver }) || "#";
+};
+
+// Prismic Image fields use "url" not "src" — normalize for <img>
+const image = prismicImage
+  ? { src: prismicImage.url || "", alt: prismicImage.alt || heading || "" }
+  : { src: "", alt: "" };
+
+// Only create button if label exists — prevents empty button rendering
+const primaryCta =
+  directCta ||
+  (button_label ? { label: button_label, href: getUrl(button_link) } : null);
+
+// ============================================================
+// 🎨 DEVELOPER SETTINGS — change these per client (Steps 1-4)
+// ============================================================
+const contentPosition = directPosition || "bottom-left"; // Step 1 Options: "bottom-left" | "left" | "center" | "right" | "bottom-right"
+const minHeight = directHeight || "large"; // Step 2 Options: "large" (90vh) | "full" (100vh) | "medium" (70vh)
+const overlayOpacity = directOverlay ?? 30; // Step 3
+const containerWidth = directContainerWidth || "contained"; // Step 4 Options: "full" (aligns with nav) | "contained" (1200px, matches other slices)
+// ============================================================
+---
+
+<section
+  class:list={[
+    "hero-homepage",
+    `hero-homepage--${contentPosition}`,
+    `hero-homepage--${minHeight}`,
+    `hero-homepage--container-${containerWidth}`,
+  ]}
+  style={`--overlay-opacity: ${overlayOpacity / 100}`}
+>
+  <div class="hero-homepage__bg">
+    <img src={image.src} alt={image.alt} loading="eager" fetchpriority="high" />
+  </div>
+
+  <div class="hero-homepage__overlay"></div>
+
+  <div class="hero-homepage__container">
+    <div class="hero-homepage__content">
+      <h1 class="hero-homepage__heading">{heading}</h1>
+      {tagline && <p class="hero-homepage__tagline">{tagline}</p>}
+      {
+        (primaryCta || secondaryCta) && (
+          <div class="hero-homepage__actions">
+            {primaryCta && (
+              <a href={primaryCta.href} class="btn btn--primary-inverted">
+                {primaryCta.label}
+              </a>
+            )}
+            {secondaryCta && (
+              <a href={secondaryCta.href} class="btn btn--secondary-inverted">
+                {secondaryCta.label}
+              </a>
+            )}
+          </div>
+        )
+      }
+    </div>
+  </div>
+</section>
+
+<style>
+  /* ============================================================
+     BASE STYLES (keep these)
+     ============================================================ */
+  .hero-homepage {
+    position: relative;
+    display: flex;
+    width: 100%;
+    color: var(--color-bg);
+  }
+
+  .hero-homepage__bg {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+  }
+
+  .hero-homepage__bg img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .hero-homepage__overlay {
+    position: absolute;
+    inset: 0;
+    background-color: rgba(0, 0, 0, var(--overlay-opacity, 0.4));
+    z-index: 1;
+  }
+
+  .hero-homepage__container {
+    position: relative;
+    z-index: 2;
+    width: 100%;
+    margin-inline: auto;
+    padding: var(--space-16) var(--gutter);
+    display: flex;
+  }
+
+  @media (min-width: 768px) {
+    .hero-homepage__container {
+      padding: var(--space-24) var(--gutter-lg);
+    }
+  }
+
+  .hero-homepage__content {
+    max-width: 30ch;
+  }
+
+  /* ============================================================
+     CONTAINER WIDTH VARIANTS (Step 4)
+     ============================================================ */
+  /* Full — text aligns with nav/gutter (default) */
+  .hero-homepage--container-full .hero-homepage__container {
+    max-width: none;
+  }
+
+  /* Contained — matches other slice widths (1200px) */
+  .hero-homepage--container-contained .hero-homepage__container {
+    max-width: var(--container-xl);
+  }
+
+  /* ============================================================
+     ACTIVE HEIGHT VARIANT (Step 4 — keep only ONE)
+     ============================================================ */
+  .hero-homepage--large {
+    min-height: 90vh;
+    min-height: 90dvh;
+  }
+
+  .hero-homepage--full {
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+
+  .hero-homepage--medium {
+    min-height: 70vh;
+  }
+
+  /* ============================================================
+     ACTIVE POSITION VARIANT (Step 4 — keep only ONE)
+     ============================================================ */
+
+  /* Bottom Left */
+  .hero-homepage--bottom-left .hero-homepage__container {
+    align-items: flex-end;
+    justify-content: flex-start;
+  }
+
+  /* Left (vertically centered) */
+  .hero-homepage--left .hero-homepage__container {
+    align-items: center;
+    justify-content: flex-start;
+  }
+
+  /* Center */
+  .hero-homepage--center .hero-homepage__container {
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+  .hero-homepage--center .hero-homepage__content {
+    max-width: 60ch;
+  }
+  .hero-homepage--center .hero-homepage__actions {
+    justify-content: center;
+  }
+
+  /* Right (vertically centered) */
+  .hero-homepage--right .hero-homepage__container {
+    align-items: center;
+    justify-content: flex-end;
+    text-align: right;
+  }
+  .hero-homepage--right .hero-homepage__actions {
+    justify-content: flex-end;
+  }
+
+  /* Bottom Right */
+  .hero-homepage--bottom-right .hero-homepage__container {
+    align-items: flex-end;
+    justify-content: flex-end;
+    text-align: right;
+  }
+  .hero-homepage--bottom-right .hero-homepage__actions {
+    justify-content: flex-end;
+  }
+
+  /* ============================================================
+     TYPOGRAPHY
+     ============================================================ */
+  .hero-homepage__heading {
+    font-family: var(--font-serif);
+    font-size: clamp(var(--text-4xl), 7vw, var(--text-6xl));
+    font-weight: var(--font-medium);
+    line-height: var(--leading-snug);
+    text-shadow: 0 2px 20px rgba(0, 0, 0, 0.3);
+  }
+
+  .hero-homepage__tagline {
+    font-size: var(--text-lg);
+    line-height: var(--leading-relaxed);
+    opacity: 0.9;
+    margin-bottom: var(--space-4);
+    text-shadow: 0 1px 10px rgba(0, 0, 0, 0.3);
+    max-width: 45ch;
+  }
+
+  @media (min-width: 768px) {
+    .hero-homepage__tagline {
+      font-size: var(--text-xl);
+    }
+  }
+
+  /* ============================================================
+     BUTTONS
+     ============================================================ */
+  .hero-homepage__actions {
+    display: flex;
+    gap: var(--space-4);
+    flex-wrap: wrap;
+  }
+</style>

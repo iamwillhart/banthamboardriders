@@ -1,0 +1,76 @@
+---
+/**
+ * Stats
+ *
+ * PURPOSE: Number/metric highlights for social proof
+ *
+ * PROPS:
+ * - stats/items (array) — { value, label }
+ *
+ * LAYOUT PROPS (passed to Section wrapper):
+ * - background ('default' | 'alt' | 'accent') — use 'accent' for bold look
+ * - spacing ('default' | 'compact' | 'hero')
+ */
+import Section from "../Section.astro";
+
+interface Stat {
+  value: string;
+  label: string;
+}
+
+interface Props {
+  stats?: Stat[];
+  items?: Stat[];
+  background?: "default" | "alt" | "accent";
+  spacing?: "default" | "compact" | "hero";
+}
+
+const {
+  stats,
+  items,
+  background = "default",
+  spacing = "default",
+} = Astro.props;
+
+// Support both "stats" (direct) and "items" (Prismic)
+const statList = stats || items || [];
+---
+
+<Section spacing={spacing} background={background}>
+  <div class="stats__grid">
+    {
+      statList.map((stat) => (
+        <div class="stat">
+          <span class="stat__value">{stat.value}</span>
+          <span class="stat__label">{stat.label}</span>
+        </div>
+      ))
+    }
+  </div>
+</Section>
+
+<style>
+  .stats__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: var(--space-8);
+    text-align: center;
+  }
+
+  .stat__value {
+    display: block;
+    font-family: var(--font-serif);
+    font-size: clamp(var(--text-4xl), 6vw, var(--text-6xl));
+    font-weight: var(--font-medium);
+    line-height: var(--leading-none);
+    margin-bottom: var(--space-2);
+  }
+
+  .stat__label {
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-wider);
+    opacity: 0.8;
+  }
+</style>

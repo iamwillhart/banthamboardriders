@@ -1,0 +1,117 @@
+---
+/**
+ * Project Detail Page
+ * 
+ * Displays a single Prismic "project" document.
+ */
+import Layout from '../../layouts/Layout.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+import SliceZone from '../../components/SliceZone.astro';
+import { client, getSettings } from '../../lib/prismic';
+
+// Generate static paths for all projects
+export async function getStaticPaths() {
+  const projects = await client.getAllByType('project');
+  
+  // Filter out projects with null/undefined UIDs (incomplete drafts)
+  return projects
+    .filter((project) => project.uid)
+    .map((project) => ({
+      params: { uid: project.uid },
+      props: { project },
+    }));
+}
+
+const { project } = Astro.props;
+const slices = project.data.body || [];
+const settings = await getSettings();
+
+const title = project.data.meta_title || project.data.title || 'Project';
+const description = project.data.meta_description || project.data.excerpt || '';
+// Social image: project-specific → settings default → none
+const image = project.data.meta_image?.url || settings?.data?.default_og_image?.url || '';
+---
+
+<Layout title={title} description={description} image={image}>
+  <Header />
+  <main>
+    {/* Project header if no hero slice */}
+    {slices.length === 0 || !slices[0]?.slice_type?.includes('hero') ? (
+      <section class="section section--hero">
+        <div class="container">
+          <div class="project-header">
+            {project.data.category && (
+              <p class="text-label text-muted">{project.data.category}</p>
+            )}
+            <h1 class="heading-1">{project.data.title}</h1>
+            {project.data.excerpt && (
+              <p class="text-body-lg text-muted">{project.data.excerpt}</p>
+            )}
+            <div class="project-meta">
+              {project.data.client && (
+                <div class="project-meta__item">
+                  <span class="text-label">Client</span>
+                  <span class="text-body">{project.data.client}</span>
+                </div>
+              )}
+              {project.data.date && (
+                <div class="project-meta__item">
+                  <span class="text-label">Date</span>
+                  <span class="text-body">{new Date(project.data.date).getFullYear()}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
+    ) : null}
+    
+    <SliceZone slices={slices} />
+    
+    {/* Back link */}
+    <section class="section section--compact">
+      <div class="container">
+        <a href="/projects" class="back-link text-label">← All Projects</a>
+      </div>
+    </section>
+  </main>
+  <Footer />
+</Layout>
+
+<style>
+  .project-header {
+    max-width: var(--container-md);
+  }
+  
+  .project-header .heading-1 {
+    margin-top: var(--space-2);
+  }
+  
+  .project-header .text-body-lg {
+    margin-top: var(--space-4);
+  }
+  
+  .project-meta {
+    display: flex;
+    gap: var(--space-8);
+    margin-top: var(--space-8);
+    padding-top: var(--space-6);
+    border-top: 1px solid var(--color-text-subtle);
+  }
+  
+  .project-meta__item {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+  
+  .back-link {
+    display: inline-block;
+    transition: opacity var(--transition-fast);
+  }
+  
+  .back-link:hover {
+    opacity: 0.6;
+  }
+</style>

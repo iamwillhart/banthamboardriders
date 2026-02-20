@@ -1,0 +1,522 @@
+---
+/**
+ * CTA (Call to Action)
+ *
+ * KB RATING: A* (0KB JS — pure CSS)
+ * CARBON TIER: A* (text only, optional decorative SVGs)
+ *
+ * Call-to-action banner with optional decorative blob shapes.
+ * Inner box is clickable (if link provided). Blobs animate in on hover.
+ *
+ * ============================================================
+ * 🚀 NEW CLIENT SETUP — follow these steps:
+ * ============================================================
+ *
+ * STEP 1: Set display mode (line ~112)
+ *   Options: "full-width" (edge-to-edge) | "inset" (contained with outer bg)
+ *
+ * STEP 2: Set text alignment (line ~113)
+ *   Options: "center" (default) | "left"
+ *
+ * STEP 3: Enable/disable blob decorations (line ~114)
+ *   Set to `true` to show blobs on hover, `false` to hide completely.
+ *
+ * STEP 4: Customize blob SVG paths (~lines 159-197)
+ *   Replace the 4 SVG paths with your hand-drawn blobs per project.
+ *
+ * STEP 5: Customize blob colors (line ~410)
+ *   Default: rgba(0, 0, 0, 0.15). Adjust per project.
+ *
+ * STEP 6: Set inset border-radius (line ~291)
+ *   Default: 0 (sharp/editorial)
+ *   Options: var(--radius-lg) for softer look
+ *
+ * STEP 7: Customize ghost button decorations (~lines 463-517)
+ *   - Opacity: Default 0.25 on hover. Adjust in `.cta__box:hover .cta__ghost-btn`
+ *   - Uses same button styling as the main CTA button
+ *   - Stagger timing can be adjusted via transition-delay values
+ *
+ * ============================================================
+ * 📝 PRISMIC FIELDS (client controls in CMS)
+ * ============================================================
+ *   - title (Key Text) — small text above main text (e.g., brand name)
+ *   - text (Key Text) — main CTA text
+ *   - button_label (Key Text) — button text
+ *   - button_link (Link) — button destination
+ *   - background_colour (Select):
+ *       • "Accent" (value: accent) — bold colored background
+ *       • "Main" (value: main) — default background
+ *       • "Secondary" (value: secondary) — alt background
+ *
+ * ============================================================
+ * 🗑️ TO REMOVE BLOB DECORATIONS ENTIRELY:
+ * ============================================================
+ *   1. Set `showBlobs = false` on line ~114
+ *   2. Or delete the blob HTML section (~lines 159-197)
+ *   3. And delete the blob CSS section (~lines 395-466)
+ *
+ * ============================================================
+ * 🗑️ TO REMOVE GHOST BUTTON DECORATIONS ENTIRELY:
+ * ============================================================
+ *   1. Delete the circles array (~lines 117-122)
+ *   2. Delete the ghost buttons HTML section (~lines 192-205)
+ *   3. Delete the ghost buttons CSS section (~lines 463-517)
+ *
+ * ============================================================
+ */
+import * as prismic from "@prismicio/client";
+import { linkResolver } from "../../lib/prismic";
+
+interface Props {
+  title?: string;
+  text: string;
+  button_label?: string;
+  button_link?: { url?: string } | string;
+  background_colour?: "accent" | "main" | "secondary";
+  primaryCta?: { label: string; href: string };
+}
+
+const {
+  title,
+  text,
+  button_label,
+  button_link,
+  background_colour = "accent",
+  primaryCta: directCta,
+} = Astro.props;
+
+// Helper to extract URL from Prismic link field
+// Uses prismic.asLink to handle all link types: Web, Document, Media
+const getUrl = (link: any): string | null => {
+  if (!link) return null;
+  if (typeof link === "string") return link || null;
+  return prismic.asLink(link, { linkResolver }) || null;
+};
+
+// Support both direct format and Prismic format
+const linkUrl = directCta?.href || getUrl(button_link);
+const buttonLabel = directCta?.label || button_label;
+
+// Normalize background colour
+const rawBg = String(background_colour || "accent").toLowerCase();
+const bgClass =
+  rawBg === "secondary" ? "alt" : rawBg === "main" ? "default" : "accent";
+
+// Outer background for inset mode (contrasts with CTA bg)
+// main → secondary outside, secondary/accent → main outside
+const outerBgClass = bgClass === "default" ? "alt" : "default";
+
+// ============================================================
+// 🎨 DEVELOPER SETTINGS — change these per client
+// ============================================================
+const displayMode = "inset" as "full-width" | "inset"; // Step 1
+const textAlignment = "center" as "center" | "left"; // Step 2
+const showBlobs = false; // Step 3
+// ============================================================
+
+// Generate 10 random positions for ghost buttons (seeded by a simple hash for consistency)
+const circles = Array.from({ length: 10 }, (_, i) => ({
+  id: i,
+  top: Math.floor((i * 17 + 23) % 100),
+  left: Math.floor((i * 31 + 7) % 100),
+}));
+
+// Button class based on background
+const buttonClass =
+  bgClass === "accent" ? "btn btn--primary-inverted" : "btn btn--primary";
+
+// Inner element: <a> if link exists, otherwise <div>
+const InnerTag = linkUrl ? "a" : "div";
+const innerProps = linkUrl ? { href: linkUrl } : {};
+---
+
+{/* Outer section — handles the outer background color */}
+<section
+  class:list={[
+    "cta",
+    `cta--${displayMode}`,
+    displayMode === "inset" && `cta--outer-${outerBgClass}`,
+  ]}
+>
+  {/* Inner box — the visible CTA with background, clickable if link exists */}
+  <InnerTag
+    {...innerProps}
+    class:list={[
+      "cta__box",
+      `cta__box--bg-${bgClass}`,
+      `cta__box--align-${textAlignment}`,
+      linkUrl && "cta__box--clickable",
+    ]}
+  >
+    {/* Blob decorations — delete this block to remove blobs entirely */}
+    {
+      showBlobs && (
+        <div class="cta__blobs" aria-hidden="true">
+          {/* Top-left blob */}
+          <svg
+            class="cta__blob cta__blob--top-left"
+            viewBox="0 0 200 200"
+            fill="currentColor"
+          >
+            <path d="M120,10 C160,30 190,70 180,120 C170,170 130,190 80,180 C30,170 10,130 20,80 C30,30 80,-10 120,10 Z" />
+          </svg>
+          {/* Top-right blob */}
+          <svg
+            class="cta__blob cta__blob--top-right"
+            viewBox="0 0 200 200"
+            fill="currentColor"
+          >
+            <path d="M150,20 C180,50 190,100 170,140 C150,180 100,190 60,170 C20,150 10,100 30,60 C50,20 110,-10 150,20 Z" />
+          </svg>
+          {/* Bottom-left blob */}
+          <svg
+            class="cta__blob cta__blob--bottom-left"
+            viewBox="0 0 200 200"
+            fill="currentColor"
+          >
+            <path d="M80,10 C130,20 170,60 180,110 C190,160 160,190 110,180 C60,170 20,140 10,90 C0,40 30,0 80,10 Z" />
+          </svg>
+          {/* Bottom-right blob */}
+          <svg
+            class="cta__blob cta__blob--bottom-right"
+            viewBox="0 0 200 200"
+            fill="currentColor"
+          >
+            <path d="M100,5 C150,15 185,55 190,105 C195,155 165,185 115,190 C65,195 25,165 15,115 C5,65 50,-5 100,5 Z" />
+          </svg>
+        </div>
+      )
+    }
+
+    {/* Decorative ghost buttons — randomly placed */}
+    <div class="cta__ghost-buttons" aria-hidden="true">
+      {
+        buttonLabel &&
+          circles.map((circle) => (
+            <span
+              class:list={["cta__ghost-btn", buttonClass]}
+              style={`top: ${circle.top}%; left: ${circle.left}%;`}
+            >
+              {buttonLabel}
+            </span>
+          ))
+      }
+    </div>
+
+    <div class="cta__inner">
+      <div class="cta__content">
+        {title && <span class="cta__title">{title}</span>}
+        <p class="cta__text">{text}</p>
+        {
+          buttonLabel && (
+            <span
+              class={buttonClass}
+              aria-hidden={linkUrl ? "true" : undefined}
+            >
+              {buttonLabel}
+            </span>
+          )
+        }
+      </div>
+    </div>
+  </InnerTag>
+</section>
+
+<style>
+  /* ============================================================
+     OUTER SECTION — handles outer background
+     ============================================================ */
+  .cta {
+    position: relative;
+  }
+
+  /* Full-width: no outer background needed, padding on section */
+  .cta--full-width {
+    padding-block: var(--space-16);
+  }
+
+  @media (min-width: 768px) {
+    .cta--full-width {
+      padding-block: var(--space-24);
+    }
+  }
+
+  /* Inset: section has outer background, padding creates the margin effect */
+  .cta--inset {
+    padding-block: var(--space-12);
+    padding-inline: var(--gutter);
+  }
+
+  @media (min-width: 768px) {
+    .cta--inset {
+      padding-inline: var(--gutter-lg);
+    }
+  }
+
+  /* Outer background colors for inset mode */
+  .cta--outer-default {
+    background-color: var(--color-bg);
+  }
+
+  .cta--outer-alt {
+    background-color: var(--color-bg-alt);
+  }
+
+  /* ============================================================
+     INNER BOX — the visible CTA element
+     ============================================================ */
+  .cta__box {
+    position: relative;
+    display: block;
+    text-decoration: none;
+    overflow: hidden;
+    padding-block: var(--space-16);
+  }
+
+  @media (min-width: 768px) {
+    .cta__box {
+      padding-block: var(--space-24);
+    }
+  }
+
+  /* Inset: constrain width, add border-radius */
+  .cta--inset .cta__box {
+    max-width: var(--container-xl);
+    margin-inline: auto;
+    border-radius: 0; /* Step 6: Change to var(--radius-lg) for softer look */
+    padding-block: var(--space-8);
+  }
+
+  @media (min-width: 768px) {
+    .cta--inset .cta__box {
+      padding-block: var(--space-12);
+    }
+  }
+
+  /* Clickable state */
+  .cta__box--clickable {
+    cursor: pointer;
+  }
+
+  /* ============================================================
+     INNER CONTENT WRAPPER
+     ============================================================ */
+  .cta__inner {
+    position: relative;
+    z-index: 1;
+    max-width: var(--container-xl);
+    margin-inline: auto;
+    padding-inline: var(--gutter);
+  }
+
+  @media (min-width: 768px) {
+    .cta__inner {
+      padding-inline: var(--gutter-lg);
+    }
+  }
+
+  .cta__content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-6);
+  }
+
+  /* ============================================================
+     BACKGROUND VARIANTS (on inner box)
+     ============================================================ */
+  .cta__box--bg-accent {
+    background-color: var(--color-accent);
+    color: var(--color-bg);
+  }
+
+  .cta__box--bg-default {
+    background-color: var(--color-bg);
+    color: var(--color-text);
+  }
+
+  .cta__box--bg-alt {
+    background-color: var(--color-bg-alt);
+    color: var(--color-text);
+  }
+
+  /* ============================================================
+     TEXT ALIGNMENT VARIANTS
+     ============================================================ */
+  .cta__box--align-center .cta__content {
+    text-align: center;
+  }
+
+  .cta__box--align-left .cta__content {
+    align-items: flex-start;
+    text-align: left;
+  }
+
+  /* ============================================================
+     TYPOGRAPHY
+     ============================================================ */
+  .cta__title {
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
+    font-weight: var(--font-semibold);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-wider);
+    opacity: 0.9;
+  }
+
+  .cta__text {
+    font-family: var(--font-serif);
+    font-size: clamp(var(--text-xl), 4vw, var(--text-3xl));
+    font-weight: var(--font-regular);
+    line-height: var(--leading-snug);
+    max-width: 20ch;
+  }
+
+  /* ============================================================
+     BUTTON STYLES
+     ============================================================ */
+  .cta__box .btn {
+    transition:
+      opacity var(--transition-fast),
+      transform var(--transition-fast);
+  }
+
+  /* Button hover state triggered by box hover */
+  .cta__box--clickable:hover .btn {
+    opacity: 0.8;
+    transform: scale(1.02);
+  }
+
+  /* ============================================================
+     BLOB DECORATIONS — delete this section to remove blobs
+     ============================================================ */
+  .cta__blobs {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  .cta__blob {
+    position: absolute;
+    width: 120px;
+    height: auto;
+    /* Step 5: Blob color — adjust per project */
+    color: rgba(0, 0, 0, 0.15);
+    transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @media (min-width: 768px) {
+    .cta__blob {
+      width: 180px;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .cta__blob {
+      width: 220px;
+    }
+  }
+
+  /* Blob positions — hidden off-screen by default */
+  .cta__blob--top-left {
+    top: -20px;
+    left: -20px;
+    transform: translate(-100%, -50%) rotate(-15deg);
+  }
+
+  .cta__blob--top-right {
+    top: -20px;
+    right: -20px;
+    transform: translate(100%, -50%) rotate(25deg);
+  }
+
+  .cta__blob--bottom-left {
+    bottom: -20px;
+    left: -20px;
+    transform: translate(-100%, 50%) rotate(10deg);
+  }
+
+  .cta__blob--bottom-right {
+    bottom: -20px;
+    right: -20px;
+    transform: translate(100%, 50%) rotate(-20deg);
+  }
+
+  /* Blobs animate in on hover of the inner box */
+  .cta__box:hover .cta__blob--top-left {
+    transform: translate(0, 0) rotate(-15deg);
+  }
+
+  .cta__box:hover .cta__blob--top-right {
+    transform: translate(0, 0) rotate(25deg);
+  }
+
+  .cta__box:hover .cta__blob--bottom-left {
+    transform: translate(0, 0) rotate(10deg);
+  }
+
+  .cta__box:hover .cta__blob--bottom-right {
+    transform: translate(0, 0) rotate(-20deg);
+  }
+
+  /* ============================================================
+     DECORATIVE GHOST BUTTONS — randomly placed button echoes
+     ============================================================ */
+  .cta__ghost-buttons {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    overflow: hidden;
+  }
+
+  .cta__ghost-btn.btn {
+    position: absolute;
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0;
+    /* Override .btn transition to include transform and stagger support */
+    transition:
+      opacity 0.4s ease,
+      transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    white-space: nowrap;
+  }
+
+  /* Staggered delays for each ghost button */
+  .cta__ghost-btn.btn:nth-child(1) {
+    transition-delay: 0s;
+  }
+  .cta__ghost-btn.btn:nth-child(2) {
+    transition-delay: 0.03s;
+  }
+  .cta__ghost-btn.btn:nth-child(3) {
+    transition-delay: 0.05s;
+  }
+  .cta__ghost-btn.btn:nth-child(4) {
+    transition-delay: 0.08s;
+  }
+  .cta__ghost-btn.btn:nth-child(5) {
+    transition-delay: 0.11s;
+  }
+  .cta__ghost-btn.btn:nth-child(6) {
+    transition-delay: 0.14s;
+  }
+  .cta__ghost-btn.btn:nth-child(7) {
+    transition-delay: 0.17s;
+  }
+  .cta__ghost-btn.btn:nth-child(8) {
+    transition-delay: 0.2s;
+  }
+  .cta__ghost-btn.btn:nth-child(9) {
+    transition-delay: 0.23s;
+  }
+  .cta__ghost-btn.btn:nth-child(10) {
+    transition-delay: 0.26s;
+  }
+
+  /* Show ghost buttons on hover */
+  .cta__box:hover .cta__ghost-btn.btn {
+    opacity: 0.25;
+    transform: translate(-50%, -50%) scale(1);
+  }
+</style>

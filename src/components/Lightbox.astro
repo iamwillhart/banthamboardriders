@@ -1,0 +1,356 @@
+---
+/**
+ * Lightbox
+ *
+ * Fullscreen image viewer with prev/next navigation.
+ * Info bar: title (left) · counter (center) · credit (right)
+ *
+ * USAGE:
+ *   import Lightbox from '../Lightbox.astro';
+ *   <Lightbox items={items} id="my-gallery" />
+ *
+ *   On trigger elements, add:
+ *   data-lightbox-target="my-gallery" data-lightbox-index="0"
+ */
+
+interface LightboxItem {
+  src: string;
+  alt: string;
+  title?: string;
+  credit?: string;
+}
+
+interface Props {
+  items: LightboxItem[];
+  id: string;
+}
+
+const { items, id } = Astro.props;
+---
+
+<div
+  class="lightbox"
+  id={id}
+  data-lightbox-items={JSON.stringify(items)}
+  aria-hidden="true"
+  role="dialog"
+  aria-modal="true"
+  aria-label="Image viewer"
+>
+  <div class="lightbox__backdrop"></div>
+
+  <button class="lightbox__close" aria-label="Close">
+    <svg
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+    >
+      <line x1="18" y1="6" x2="6" y2="18"></line>
+      <line x1="6" y1="6" x2="18" y2="18"></line>
+    </svg>
+  </button>
+
+  <button class="lightbox__nav lightbox__nav--prev" aria-label="Previous image">
+    <svg
+      width="28"
+      height="28"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+    >
+      <polyline points="15 18 9 12 15 6"></polyline>
+    </svg>
+  </button>
+
+  <button class="lightbox__nav lightbox__nav--next" aria-label="Next image">
+    <svg
+      width="28"
+      height="28"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+    >
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </button>
+
+  <div class="lightbox__content">
+    <div class="lightbox__stage">
+      <img class="lightbox__image" src="" alt="" />
+    </div>
+    <div class="lightbox__info">
+      <span class="lightbox__title"></span>
+      <span class="lightbox__counter"></span>
+      <span class="lightbox__credit"></span>
+    </div>
+  </div>
+</div>
+
+<style>
+  .lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-modal);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    transition:
+      opacity var(--transition-base),
+      visibility var(--transition-base);
+  }
+
+  .lightbox[aria-hidden="false"] {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .lightbox__backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(240, 240, 240, 0.97);
+  }
+
+  /* Close button */
+  .lightbox__close {
+    position: absolute;
+    top: var(--space-4);
+    right: var(--space-4);
+    z-index: 2;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.08);
+    border-radius: var(--radius-full);
+    color: var(--color-text);
+    cursor: pointer;
+    transition: background var(--transition-fast);
+  }
+
+  .lightbox__close:hover {
+    background: rgba(0, 0, 0, 0.15);
+  }
+
+  /* Nav arrows */
+  .lightbox__nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 2;
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.08);
+    border-radius: var(--radius-full);
+    color: var(--color-text);
+    cursor: pointer;
+    transition: background var(--transition-fast);
+  }
+
+  .lightbox__nav:hover {
+    background: rgba(0, 0, 0, 0.15);
+  }
+
+  .lightbox__nav--prev {
+    left: var(--space-4);
+  }
+
+  .lightbox__nav--next {
+    right: var(--space-4);
+  }
+
+  /* Content wrapper — keeps info bar same width as image */
+  .lightbox__content {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    max-width: 85vw;
+    max-height: 85vh;
+  }
+
+  .lightbox__stage {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  .lightbox__image {
+    max-width: 100%;
+    max-height: 75vh;
+    object-fit: contain;
+    display: block;
+  }
+
+  /* Info bar — single row: title (left) · counter (center) · credit (right) */
+  .lightbox__info {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: var(--space-1) 0;
+    gap: var(--space-4);
+    min-height: var(--space-8);
+  }
+
+  .lightbox__title {
+    font-family: var(--font-serif);
+    font-size: var(--text-sm);
+    text-align: left;
+    flex: 1;
+  }
+
+  .lightbox__counter {
+    font-size: var(--text-sm);
+    font-family: var(--font-sans);
+    color: var(--color-text-muted);
+    letter-spacing: var(--tracking-wide);
+    text-align: center;
+    flex-shrink: 0;
+  }
+
+  .lightbox__credit {
+    font-size: var(--text-sm);
+    text-align: right;
+    flex: 1;
+  }
+
+  /* Keep space for layout alignment even when empty */
+  .lightbox__title:empty,
+  .lightbox__credit:empty {
+    visibility: hidden;
+  }
+
+  .lightbox__counter:empty {
+    display: none;
+  }
+
+  @media (max-width: 640px) {
+    .lightbox__content {
+      max-width: 95vw;
+    }
+
+    .lightbox__info {
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: var(--space-2);
+    }
+
+    .lightbox__title,
+    .lightbox__credit {
+      flex: 0 0 auto;
+    }
+  }
+</style>
+
+<script>
+  function initAllLightboxes() {
+    document
+      .querySelectorAll<HTMLElement>(".lightbox[data-lightbox-items]")
+      .forEach((lb) => {
+        if (lb.dataset.lbInit) return;
+        lb.dataset.lbInit = "true";
+
+        const items: Array<{
+          src: string;
+          alt: string;
+          title?: string;
+          credit?: string;
+        }> = JSON.parse(lb.dataset.lightboxItems || "[]");
+
+        let current = 0;
+        const id = lb.id;
+
+        const img = lb.querySelector<HTMLImageElement>(".lightbox__image")!;
+        const titleEl = lb.querySelector<HTMLElement>(".lightbox__title")!;
+        const creditEl = lb.querySelector<HTMLElement>(".lightbox__credit")!;
+        const counterEl = lb.querySelector<HTMLElement>(".lightbox__counter")!;
+        const closeBtn = lb.querySelector<HTMLElement>(".lightbox__close")!;
+        const prevBtn = lb.querySelector<HTMLElement>(".lightbox__nav--prev")!;
+        const nextBtn = lb.querySelector<HTMLElement>(".lightbox__nav--next")!;
+        const backdrop = lb.querySelector<HTMLElement>(".lightbox__backdrop")!;
+
+        function show(index: number) {
+          current = index;
+          const item = items[index];
+          if (!item) return;
+
+          img.src = item.src;
+          img.alt = item.alt || "";
+          titleEl.textContent = item.title || "";
+          creditEl.textContent = item.credit || "";
+          counterEl.textContent =
+            items.length > 1 ? `${index + 1} / ${items.length}` : "";
+
+          prevBtn.style.display = items.length <= 1 ? "none" : "";
+          nextBtn.style.display = items.length <= 1 ? "none" : "";
+
+          lb.setAttribute("aria-hidden", "false");
+          document.body.style.overflow = "hidden";
+          closeBtn.focus();
+        }
+
+        function hide() {
+          lb.setAttribute("aria-hidden", "true");
+          document.body.style.overflow = "";
+          const trigger = document.querySelector<HTMLElement>(
+            `[data-lightbox-target="${id}"][data-lightbox-index="${current}"]`,
+          );
+          trigger?.focus();
+        }
+
+        function prev() {
+          show((current - 1 + items.length) % items.length);
+        }
+
+        function next() {
+          show((current + 1) % items.length);
+        }
+
+        document
+          .querySelectorAll<HTMLElement>(`[data-lightbox-target="${id}"]`)
+          .forEach((trigger) => {
+            trigger.style.cursor = "pointer";
+            trigger.addEventListener("click", (e) => {
+              e.preventDefault();
+              show(parseInt(trigger.dataset.lightboxIndex || "0", 10));
+            });
+            trigger.addEventListener("keydown", (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                show(parseInt(trigger.dataset.lightboxIndex || "0", 10));
+              }
+            });
+          });
+
+        closeBtn.addEventListener("click", hide);
+        backdrop.addEventListener("click", hide);
+        prevBtn.addEventListener("click", prev);
+        nextBtn.addEventListener("click", next);
+
+        document.addEventListener("keydown", (e) => {
+          if (lb.getAttribute("aria-hidden") !== "false") return;
+          if (e.key === "Escape") hide();
+          if (e.key === "ArrowLeft") prev();
+          if (e.key === "ArrowRight") next();
+        });
+      });
+  }
+
+  initAllLightboxes();
+  document.addEventListener("astro:after-swap", initAllLightboxes);
+</script>

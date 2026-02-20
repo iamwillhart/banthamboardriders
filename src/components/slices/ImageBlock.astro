@@ -1,0 +1,303 @@
+---
+/**
+ * ImageBlock
+ *
+ * KB RATING: A* (0KB JS — pure CSS)
+ * CARBON TIER: A (single image load)
+ *
+ * Standalone image with optional caption.
+ * Two display modes: full-width (default) or inset with margins.
+ *
+ * ============================================================
+ * 🚀 NEW CLIENT SETUP — follow these steps:
+ * ============================================================
+ *
+ * STEP 1: Set full-width aspect ratios (lines ~140-145)
+ *   Mobile default: 3 / 2 (editorial)
+ *   Desktop default: 2.35 / 1 (cinematic)
+ *
+ * STEP 2: Set inset aspect ratio (line ~175)
+ *   Default: 16 / 9
+ *
+ * STEP 3: Set border-radius (line ~125)
+ *   Default: 0 (sharp/editorial)
+ *   Options: var(--radius-md) for softer look
+ *
+ * STEP 4: Set inset max-width (line ~165)
+ *   Default: 1200px (matches TextStatement)
+ *
+ * ============================================================
+ * 📝 PRISMIC FIELDS (client controls in CMS)
+ * ============================================================
+ *   - image (Image) — the image (includes alt, dimensions)
+ *   - caption (Key Text) — optional caption text
+ *   - display_mode (Select):
+ *       • "Full width" (value: full-width) — edge-to-edge, caption overlaid
+ *       • "Inset" (value: inset) — with margins, caption below
+ *   - background_colour (Select) — for inset only:
+ *       • "Main" (value: main) — solid main background
+ *       • "Secondary" (value: secondary) — solid secondary background
+ *       • "Split main/secondary" (value: split-main-secondary) — top main, bottom secondary
+ *       • "Split secondary/main" (value: split-secondary-main) — top secondary, bottom main
+ *
+ * ============================================================
+ */
+
+interface Props {
+  image?: {
+    url?: string;
+    alt?: string;
+    dimensions?: { width: number; height: number };
+  };
+  caption?: string;
+  display_mode?: "full-width" | "inset";
+  background_colour?:
+    | "main"
+    | "secondary"
+    | "split-main-secondary"
+    | "split-secondary-main";
+}
+
+const {
+  image,
+  caption,
+  display_mode = "full-width",
+  background_colour = "main",
+} = Astro.props;
+
+// Normalize display mode (handle Prismic capitalization/spacing quirks)
+const rawMode = String(display_mode || "full-width")
+  .toLowerCase()
+  .replace(" ", "-")
+  .replace("_", "-");
+const mode = rawMode === "inset" ? "inset" : "full-width";
+
+// Normalize background colour
+const rawBg = String(background_colour || "main")
+  .toLowerCase()
+  .replace(" ", "-")
+  .replace("_", "-")
+  .replace("/", "-");
+const bgClass = rawBg.startsWith("split") ? rawBg : `solid-${rawBg}`;
+
+// Extract image data with fallbacks
+const imgSrc = image?.url || "";
+const imgAlt = image?.alt || "";
+const imgWidth = image?.dimensions?.width;
+const imgHeight = image?.dimensions?.height;
+
+// Generate srcset for responsive images (Prismic imgix)
+// Provides 3 sizes for responsive loading
+const generateSrcset = (url: string) => {
+  if (!url) return "";
+  const baseUrl = url.split("?")[0]; // Remove existing params
+  return `${baseUrl}?w=800&auto=format 800w, ${baseUrl}?w=1200&auto=format 1200w, ${baseUrl}?w=1600&auto=format 1600w`;
+};
+
+const srcset = generateSrcset(imgSrc);
+---
+
+{
+  imgSrc && (
+    <figure
+      class:list={[
+        "image-block",
+        `image-block--${mode}`,
+        mode === "inset" && `image-block--bg-${bgClass}`,
+      ]}
+    >
+      <div class="image-block__wrapper">
+        <img
+          src={imgSrc}
+          srcset={srcset}
+          sizes={
+            mode === "full-width"
+              ? "100vw"
+              : "(min-width: var(--container-xl)) var(--container-xl), 100vw"
+          }
+          alt={imgAlt}
+          width={imgWidth}
+          height={imgHeight}
+          loading="lazy"
+          decoding="async"
+        />
+        {mode === "full-width" && caption && (
+          <figcaption class="image-block__caption image-block__caption--overlay">
+            {caption}
+          </figcaption>
+        )}
+      </div>
+      {mode === "inset" && caption && (
+        <figcaption class="image-block__caption image-block__caption--below">
+          {caption}
+        </figcaption>
+      )}
+    </figure>
+  )
+}
+
+<style>
+  /* ============================================================
+     BASE STYLES
+     ============================================================ */
+  .image-block {
+    margin: 0;
+  }
+
+  .image-block__wrapper {
+    position: relative;
+    overflow: hidden;
+    border-radius: 0; /* Step 3: Border radius — change to var(--radius-md) for softer */
+  }
+
+  .image-block__wrapper img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  /* ============================================================
+     FULL-WIDTH VARIANT (default)
+     ============================================================ */
+  .image-block--full-width {
+    padding-inline: 0;
+    padding-block: 0;
+    /* Break out of any container */
+    width: 100vw;
+    margin-left: calc(50% - 50vw);
+  }
+
+  .image-block--full-width .image-block__wrapper {
+    aspect-ratio: 3 / 2; /* Step 1a: Mobile aspect ratio */
+  }
+
+  @media (min-width: 768px) {
+    .image-block--full-width .image-block__wrapper {
+      aspect-ratio: 2.35 / 1; /* Step 1b: Desktop aspect ratio */
+    }
+  }
+
+  .image-block--full-width .image-block__wrapper::after {
+    /* Gradient overlay for caption legibility */
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      to top,
+      rgba(0, 0, 0, 0.5) 0%,
+      rgba(0, 0, 0, 0) 40%
+    );
+    pointer-events: none;
+  }
+
+  .image-block__caption--overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: var(--gutter) var(--gutter);
+    color: white;
+    font-size: var(--text-sm);
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+    z-index: 1;
+  }
+
+  @media (min-width: 768px) {
+    .image-block__caption--overlay {
+      padding: var(--gutter-lg) var(--gutter-lg);
+    }
+  }
+
+  /* ============================================================
+     INSET VARIANT
+     ============================================================ */
+  .image-block--inset {
+    position: relative;
+    max-width: var(--container-xl); /* Step 4: Matches TextStatement width */
+    margin-inline: auto;
+    padding-inline: 0;
+    padding-block: var(--space-16);
+  }
+
+  @media (min-width: 768px) {
+    .image-block--inset {
+      padding-inline: var(--gutter-lg);
+      padding-block: var(--space-24);
+    }
+  }
+
+  .image-block--inset .image-block__wrapper {
+    position: relative;
+    z-index: 1;
+    aspect-ratio: 16 / 9; /* Step 2: Inset aspect ratio */
+  }
+
+  .image-block__caption--below {
+    position: relative;
+    z-index: 1;
+    margin-top: var(--space-4);
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+    text-align: left;
+  }
+
+  /* ============================================================
+     INSET BACKGROUND VARIANTS — full-bleed backgrounds
+     ============================================================ */
+
+  /* Pseudo-element for full-bleed background */
+  .image-block--bg-solid-main::before,
+  .image-block--bg-solid-secondary::before,
+  .image-block--bg-split-main-secondary::before,
+  .image-block--bg-split-secondary-main::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    /* Break out to full viewport width */
+    left: 50%;
+    right: 50%;
+    margin-left: -50vw;
+    margin-right: -50vw;
+    width: 100vw;
+    z-index: 0;
+  }
+
+  .image-block--bg-solid-main::before {
+    background-color: var(--color-bg);
+  }
+
+  .image-block--bg-solid-secondary::before {
+    background-color: var(--color-bg-alt);
+  }
+
+  /* Split backgrounds — gradient creates the split at 50% (center of image) */
+  .image-block--bg-split-main-secondary::before {
+    background: linear-gradient(
+      to bottom,
+      var(--color-bg) 50%,
+      var(--color-bg-alt) 50%
+    );
+  }
+
+  .image-block--bg-split-secondary-main::before {
+    background: linear-gradient(
+      to bottom,
+      var(--color-bg-alt) 50%,
+      var(--color-bg) 50%
+    );
+  }
+
+  /* Tighter padding for split backgrounds — bridges sections above/below */
+  .image-block--bg-split-main-secondary,
+  .image-block--bg-split-secondary-main {
+    padding-block: 0;
+  }
+
+  /* Adjust caption color on secondary backgrounds */
+  .image-block--bg-solid-secondary .image-block__caption--below,
+  .image-block--bg-split-secondary-main .image-block__caption--below {
+    color: var(--color-text-muted);
+  }
+</style>

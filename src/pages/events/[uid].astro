@@ -1,0 +1,244 @@
+---
+/**
+ * Event Detail Page
+ *
+ * Displays a single Prismic "event" document.
+ * Shows event header with date/time, location, category,
+ * booking link, then the slice zone body.
+ */
+import Layout from "../../layouts/Layout.astro";
+import Header from "../../components/Header.astro";
+import Footer from "../../components/Footer.astro";
+import SliceZone from "../../components/SliceZone.astro";
+import { client, getSettings } from "../../lib/prismic";
+import * as prismic from "@prismicio/client";
+import { linkResolver } from "../../lib/prismic";
+
+// Generate static paths for all events
+export async function getStaticPaths() {
+  const events = await client.getAllByType("event");
+
+  return events
+    .filter((event) => event.uid)
+    .map((event) => ({
+      params: { uid: event.uid },
+      props: { event },
+    }));
+}
+
+const { event } = Astro.props;
+const slices = event.data.body || [];
+const settings = await getSettings();
+
+const title = event.data.meta_title || event.data.title || "Event";
+const description = event.data.meta_description || event.data.excerpt || "";
+const image =
+  event.data.meta_image?.url || settings?.data?.default_og_image?.url || "";
+
+// ============================================================
+// Date formatting helpers
+// ============================================================
+const startDate = event.data.start_date_time
+  ? new Date(event.data.start_date_time)
+  : null;
+const endDate = event.data.end_date_time
+  ? new Date(event.data.end_date_time)
+  : null;
+
+function formatDate(date: Date): string {
+  return date.toLocaleDateString("en-GB", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+function formatTime(date: Date): string {
+  return date.toLocaleTimeString("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+// Build display strings
+let dateDisplay = "";
+let timeDisplay = "";
+
+if (startDate) {
+  const startDay = startDate.toDateString();
+  const endDay = endDate ? endDate.toDateString() : null;
+
+  if (endDate && endDay !== startDay) {
+    // Multi-day event
+    dateDisplay = `${formatDate(startDate)} – ${formatDate(endDate)}`;
+    timeDisplay = `${formatTime(startDate)} – ${formatTime(endDate)}`;
+  } else {
+    // Single day event
+    dateDisplay = formatDate(startDate);
+    timeDisplay = formatTime(startDate);
+    if (endDate) {
+      timeDisplay = `${formatTime(startDate)} – ${formatTime(endDate)}`;
+    }
+  }
+}
+
+// Booking link
+const bookingUrl = event.data.booking_link
+  ? prismic.asLink(event.data.booking_link, { linkResolver })
+  : null;
+---
+
+<Layout title={title} description={description} image={image}>
+  <Header />
+  <main>
+    {/* Event header — always shown */}
+    <section class="section section--hero">
+      <div class="container">
+        <div class="event-header">
+          {
+            event.data.category && (
+              <span class="event-header__category">{event.data.category}</span>
+            )
+          }
+          <h1 class="heading-1">{event.data.title}</h1>
+          {
+            event.data.excerpt && (
+              <p class="text-body-lg text-muted">{event.data.excerpt}</p>
+            )
+          }
+
+          <div class="event-meta">
+            {
+              dateDisplay && (
+                <div class="event-meta__item">
+                  <span class="text-label">Date</span>
+                  <span class="text-body">{dateDisplay}</span>
+                </div>
+              )
+            }
+            {
+              timeDisplay && (
+                <div class="event-meta__item">
+                  <span class="text-label">Time</span>
+                  <span class="text-body">{timeDisplay}</span>
+                </div>
+              )
+            }
+            {
+              event.data.location && (
+                <div class="event-meta__item">
+                  <span class="text-label">Location</span>
+                  <span class="text-body">{event.data.location}</span>
+                </div>
+              )
+            }
+          </div>
+
+          {
+            bookingUrl && (
+              <div class="event-header__actions">
+                <a
+                  href={bookingUrl}
+                  class="btn btn--primary"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Book Now
+                </a>
+              </div>
+            )
+          }
+        </div>
+      </div>
+    </section>
+
+    {/* Featured image */}
+    {
+      event.data.featured_image?.url && (
+        <section class="section section--compact">
+          <div class="container container--wide">
+            <img
+              src={`${event.data.featured_image.url.split("?")[0]}?auto=format&q=80&w=1400`}
+              alt={event.data.featured_image.alt || ""}
+              width={event.data.featured_image.dimensions?.width}
+              height={event.data.featured_image.dimensions?.height}
+              class="event-hero-image"
+              loading="eager"
+              decoding="async"
+            />
+          </div>
+        </section>
+      )
+    }
+
+    <SliceZone slices={slices} />
+
+    {/* Back link */}
+    <section class="section section--compact">
+      <div class="container">
+        <a href="/events" class="back-link text-label">← All Events</a>
+      </div>
+    </section>
+  </main>
+  <Footer />
+</Layout>
+
+<style>
+  .event-header {
+    max-width: var(--container-md);
+  }
+
+  .event-header__category {
+    display: inline-block;
+    font-family: var(--font-sans);
+    font-size: var(--text-xs);
+    font-weight: var(--font-medium);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-wider);
+    color: var(--color-accent);
+    margin-bottom: var(--space-2);
+  }
+
+  .event-header .heading-1 {
+    margin-top: var(--space-2);
+  }
+
+  .event-header .text-body-lg {
+    margin-top: var(--space-4);
+  }
+
+  .event-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-8);
+    margin-top: var(--space-8);
+    padding-top: var(--space-6);
+    border-top: 1px solid var(--color-text-subtle);
+  }
+
+  .event-meta__item {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  .event-header__actions {
+    margin-top: var(--space-8);
+  }
+
+  .event-hero-image {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  .back-link {
+    display: inline-block;
+    transition: opacity var(--transition-fast);
+  }
+
+  .back-link:hover {
+    opacity: 0.6;
+  }
+</style>

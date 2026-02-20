@@ -1,0 +1,257 @@
+---
+/**
+ * Accordion
+ *
+ * KB RATING: A* (0KB JS — native <details>)
+ * CARBON TIER: A* (text only)
+ *
+ * Flexible collapsible content sections using native HTML.
+ * Works for FAQs, feature lists, process steps, service details, etc.
+ * Only one item can be open at a time.
+ *
+ * ============================================================
+ * 🚀 NEW CLIENT SETUP — follow these steps:
+ * ============================================================
+ *
+ * STEP 1: Set content max-width (line ~105)
+ *   Adjust the character width for content readability.
+ *   Default: 65ch (optimal prose reading)
+ *
+ * STEP 2: Set header alignment (line ~109)
+ *   - text-align: center    → Centered (default)
+ *   - text-align: left      → Left-aligned
+ *
+ * STEP 3: Customize toggle icon (line ~145)
+ *   Default: + that rotates to ×
+ *   Alternative: › arrow, custom SVG, etc.
+ *
+ * STEP 4: Set item borders (line ~120)
+ *   - border-bottom only → Editorial/minimal (default)
+ *   - Add border-top to first → Boxed look
+ *   - Remove borders → Ultra-minimal
+ *
+ * ============================================================
+ * 📝 PRISMIC FIELDS (client controls in CMS)
+ * ============================================================
+ *   - headline (Key Text) — section heading
+ *   - subheadline (Key Text) — optional supporting text
+ *   - items (Repeatable group):
+ *       • title (Key Text) — item heading (required)
+ *       • content (Rich Text) — expandable content
+ *   - background_colour (Select):
+ *       • "Main colour" (value: main) — uses --color-bg
+ *       • "Secondary colour" (value: secondary) — uses --color-bg-alt
+ *       • "Accent colour" (value: accent) — uses --color-accent
+ *
+ * ============================================================
+ * 🔧 BEHAVIOUR NOTES
+ * ============================================================
+ *   - Uses native <details> for 0KB JS
+ *   - `name` attribute ensures only one item open at a time
+ *   - Rich text content supports bold, italic, links, lists
+ *
+ * ============================================================
+ */
+import Section from "../Section.astro";
+import * as prismic from "@prismicio/client";
+import { linkResolver } from "../../lib/prismic";
+
+interface AccordionItem {
+  title: string;
+  content?: any; // Rich text field
+}
+
+interface Props {
+  headline?: string;
+  subheadline?: string;
+  items?: AccordionItem[];
+  background_colour?: "main" | "secondary" | "accent";
+  spacing?: "default" | "compact" | "hero";
+}
+
+const {
+  headline,
+  subheadline,
+  items: rawItems = [],
+  background_colour = "main",
+  spacing = "default",
+} = Astro.props;
+
+// Map client-friendly names to Section's background prop
+const bgValue = String(background_colour || "main").toLowerCase();
+const background =
+  bgValue === "secondary" ? "alt" : bgValue === "accent" ? "accent" : "default";
+
+// Filter out empty items
+const items = rawItems.filter((item) => item.title);
+
+// Generate unique name for single-open mode (prevents cross-accordion conflicts)
+const accordionName = `accordion-${Math.random().toString(36).slice(2, 9)}`;
+---
+
+<Section spacing={spacing} background={background} container="narrow">
+  {
+    (headline || subheadline) && (
+      <header class="accordion__header">
+        {headline && <h2 class="accordion__headline">{headline}</h2>}
+        {subheadline && <p class="accordion__subheadline">{subheadline}</p>}
+      </header>
+    )
+  }
+  <div class="accordion__list">
+    {
+      items.map((item) => {
+        // Render rich text content via Prismic
+        const htmlContent = item.content
+          ? prismic.asHTML(item.content, { linkResolver })
+          : "";
+
+        return (
+          <details class="accordion__item" name={accordionName}>
+            <summary class="accordion__trigger">
+              <span class="accordion__title">{item.title}</span>
+              <span class="accordion__toggle" aria-hidden="true">
+                +
+              </span>
+            </summary>
+            <div class="accordion__content">
+              <div class="accordion__content-inner" set:html={htmlContent} />
+            </div>
+          </details>
+        );
+      })
+    }
+  </div>
+</Section>
+
+<style>
+  /* ============================================================
+     HEADER — adjust per project (Step 2)
+     ============================================================ */
+  .accordion__header {
+    text-align: left; /* Step 2: center | left */
+    margin-bottom: var(--space-8);
+  }
+
+  .accordion__headline {
+    font-family: var(--font-serif);
+    font-size: clamp(var(--text-3xl), 4vw, var(--text-4xl));
+    font-weight: var(--font-medium);
+    line-height: var(--leading-snug);
+  }
+
+  .accordion__subheadline {
+    font-size: var(--text-lg);
+    margin-top: var(--space-4);
+    margin-inline: auto;
+  }
+
+  .accordion__header:has(.accordion__headline:only-child) {
+    margin-bottom: var(--space-8);
+  }
+
+  /* Left-aligned variant (when changed in Step 2) */
+  .accordion__header[style*="text-align: left"] .accordion__subheadline {
+    margin-inline: 0;
+  }
+
+  /* ============================================================
+     LIST CONTAINER
+     ============================================================ */
+  .accordion__list {
+    display: flex;
+    flex-direction: column;
+    max-width: 65ch; /* Step 1: Content max-width */
+    margin-inline: auto;
+  }
+
+  /* ============================================================
+     ITEM — borders and spacing (Step 4)
+     ============================================================ */
+  .accordion__item {
+    border-bottom: 1px solid currentColor;
+  }
+
+  /* ============================================================
+     TRIGGER (summary element)
+     ============================================================ */
+  .accordion__trigger {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--space-4);
+    padding-block: var(--space-5);
+    cursor: pointer;
+    list-style: none; /* Remove default marker */
+    user-select: none;
+  }
+
+  /* Remove webkit default marker */
+  .accordion__trigger::-webkit-details-marker {
+    display: none;
+  }
+
+  /* ============================================================
+     TITLE
+     ============================================================ */
+  .accordion__title {
+    font-family: var(--font-serif);
+    font-size: var(--text-lg);
+    font-weight: var(--font-medium);
+    line-height: var(--leading-snug);
+  }
+
+  /* ============================================================
+     TOGGLE ICON — customize per project (Step 3)
+     ============================================================ */
+  .accordion__toggle {
+    flex-shrink: 0;
+    font-size: var(--text-xl);
+    font-weight: var(--font-light);
+    line-height: 1;
+    transition: transform var(--transition-fast);
+  }
+
+  .accordion__item[open] .accordion__toggle {
+    transform: rotate(45deg);
+  }
+
+  /* ============================================================
+     CONTENT
+     ============================================================ */
+  .accordion__content {
+    padding-bottom: var(--space-6);
+    overflow: hidden;
+  }
+
+  /* ============================================================
+     CONTENT TYPOGRAPHY (rich text from Prismic)
+     ============================================================ */
+  .accordion__content-inner {
+    line-height: var(--leading-relaxed);
+  }
+
+  .accordion__content-inner :global(p) {
+    font-size: var(--text-base);
+  }
+
+  .accordion__content-inner :global(> * + *) {
+    margin-top: var(--space-4);
+  }
+
+  /* Remove top margin from first element */
+  .accordion__content-inner :global(> :first-child) {
+    margin-top: 0;
+  }
+
+  /* Links */
+  .accordion__content-inner :global(a) {
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    transition: opacity var(--transition-fast);
+  }
+
+  .accordion__content-inner :global(a:hover) {
+    opacity: 0.7;
+  }
+</style>

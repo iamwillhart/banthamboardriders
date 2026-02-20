@@ -1,0 +1,266 @@
+---
+import { getSettings } from "../lib/prismic";
+import * as prismic from "@prismicio/client";
+
+interface Props {
+  class?: string;
+}
+
+const { class: className } = Astro.props;
+
+// Fetch global settings from Prismic
+const settings = await getSettings();
+
+// Site identity
+const siteName = settings?.data?.site_name || "Site Name";
+const siteTagline = settings?.data?.site_tagline || "";
+
+// Logo — prefer footer_logo, fall back to header_logo
+const footerLogo = settings?.data?.footer_logo?.url
+  ? settings.data.footer_logo
+  : settings?.data?.header_logo;
+
+// Contact details
+const contactEmail = settings?.data?.contact_email || "";
+const addressLine1 = settings?.data?.address_line_1 || "";
+const addressLine2 = settings?.data?.address_line_2 || "";
+const addressCity = settings?.data?.address_city || "";
+const addressPostcode = settings?.data?.address_postcode || "";
+const phoneNumber = settings?.data?.phone_number || "";
+
+const hasAddress =
+  addressLine1 || addressLine2 || addressCity || addressPostcode;
+
+// Social links
+const linkedinUrl = prismic.asLink(settings?.data?.linkedin_url) || "";
+const instagramUrl = prismic.asLink(settings?.data?.instagram_url) || "";
+const facebookUrl = prismic.asLink(settings?.data?.facebook_url) || "";
+
+const hasSocial = linkedinUrl || instagramUrl || facebookUrl;
+---
+
+<footer class:list={["footer", className]}>
+  <div class="footer__inner container">
+    <div class="footer__column footer__column--brand">
+      <div class="footer__brand">
+        {
+          footerLogo?.url ? (
+            <a href="/" class="footer__logo-link">
+              <img
+                src={footerLogo.url}
+                alt={footerLogo.alt || siteName}
+                class="footer__logo-img"
+                width={footerLogo.dimensions?.width}
+                height={footerLogo.dimensions?.height}
+              />
+            </a>
+          ) : (
+            <h2 class="footer__logo">{siteName}</h2>
+          )
+        }
+        {siteTagline && <p class="footer__description">{siteTagline}</p>}
+      </div>
+    </div>
+
+    <div class="footer__column footer__column--contact">
+      <h3 class="footer__heading">Contact</h3>
+      {
+        contactEmail && (
+          <a href={`mailto:${contactEmail}`} class="footer__email">
+            {contactEmail}
+          </a>
+        )
+      }
+      {
+        phoneNumber && (
+          <a
+            href={`tel:${phoneNumber.replace(/\s/g, "")}`}
+            class="footer__phone"
+          >
+            {phoneNumber}
+          </a>
+        )
+      }
+      {
+        hasAddress && (
+          <address class="footer__address">
+            {addressLine1 && <div>{addressLine1}</div>}
+            {addressLine2 && <div>{addressLine2}</div>}
+            {(addressCity || addressPostcode) && (
+              <div>
+                {[addressCity, addressPostcode].filter(Boolean).join(", ")}
+              </div>
+            )}
+          </address>
+        )
+      }
+    </div>
+
+    <div class="footer__column footer__column--follow">
+      {
+        hasSocial && (
+          <>
+            <h3 class="footer__heading">Follow</h3>
+            {linkedinUrl && (
+              <a
+                href={linkedinUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="footer__social-link"
+              >
+                LinkedIn
+              </a>
+            )}
+            {instagramUrl && (
+              <a
+                href={instagramUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="footer__social-link"
+              >
+                Instagram
+              </a>
+            )}
+            {facebookUrl && (
+              <a
+                href={facebookUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="footer__social-link"
+              >
+                Facebook
+              </a>
+            )}
+          </>
+        )
+      }
+      <nav class="footer__policies">
+        <a href="/privacy" class="footer__policy-link">Privacy Policy</a>
+        <a href="/terms" class="footer__policy-link">Terms</a>
+      </nav>
+    </div>
+  </div>
+</footer>
+
+<style>
+  .footer {
+    padding-block: var(--space-12) var(--space-24);
+    background-color: var(--color-bg);
+  }
+
+  .footer__inner {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-8);
+  }
+
+  @media (min-width: 768px) {
+    .footer__inner {
+      grid-template-columns: 2fr 1fr 1fr;
+      gap: var(--space-8);
+    }
+  }
+
+  .footer__column {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .footer__brand {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .footer__logo {
+    font-family: var(--font-serif);
+    font-size: var(--text-2xl);
+    font-weight: var(--font-bold);
+    line-height: var(--leading-snug);
+    letter-spacing: var(--tracking-normal);
+    margin: 0;
+  }
+
+  .footer__logo-link {
+    display: inline-block;
+  }
+
+  .footer__logo-img {
+    display: block;
+    height: 130px;
+    width: auto;
+    object-fit: contain;
+  }
+
+  .footer__description {
+    font-family: var(--font-serif);
+    font-size: var(--text-sm);
+    line-height: var(--leading-relaxed);
+    color: var(--color-text);
+    margin: 0;
+    max-width: 30ch;
+  }
+
+  .footer__heading {
+    font-family: var(--font-serif);
+    font-size: var(--text-sm);
+    font-weight: var(--font-bold);
+    color: var(--color-text);
+    margin: 0 0 var(--space-4) 0;
+  }
+
+  .footer__email {
+    font-family: var(--font-serif);
+    font-size: var(--text-sm);
+    color: var(--color-text);
+    margin-bottom: var(--space-4);
+    transition: opacity var(--transition-fast);
+  }
+
+  .footer__email:hover {
+    opacity: 0.6;
+  }
+
+  .footer__address {
+    font-family: var(--font-serif);
+    font-size: var(--text-sm);
+    font-style: normal;
+    line-height: var(--leading-relaxed);
+    color: var(--color-text);
+    margin-bottom: var(--space-4);
+  }
+
+  .footer__address div {
+    margin-bottom: 0;
+  }
+
+  .footer__policies {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    margin-top: var(--space-8);
+  }
+
+  .footer__policy-link {
+    font-family: var(--font-serif);
+    font-size: var(--text-sm);
+    font-weight: var(--font-bold);
+    color: var(--color-text);
+    transition: opacity var(--transition-fast);
+  }
+
+  .footer__policy-link:hover {
+    opacity: 0.6;
+  }
+
+  .footer__social-link {
+    font-family: var(--font-serif);
+    font-size: var(--text-sm);
+    color: var(--color-text);
+    transition: opacity var(--transition-fast);
+  }
+
+  .footer__social-link:hover {
+    opacity: 0.6;
+  }
+</style>

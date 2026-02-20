@@ -1,0 +1,70 @@
+---
+/**
+ * Divider
+ * 
+ * KB RATING: A* (0KB JS — pure CSS)
+ * CARBON TIER: A* (pure CSS, ~100 bytes)
+ * 
+ * PURPOSE: Visual separator between sections
+ * 
+ * PROPS:
+ * - variant ('full' | 'centered' | 'accent') — style
+ * 
+ * VARIANTS:
+ * - full: full-width subtle line
+ * - centered: short centered line
+ * - accent: short colored line
+ * 
+ * CUSTOMISE:
+ * - Line thickness (line ~20) — currently 1px (3px for accent)
+ * - Centered width (line ~24) — currently 200px
+ * - Accent width (line ~28) — currently 60px
+ * 
+ * ANIMATIONS: None (utility component)
+ * 
+ * USAGE:
+ * - Between major sections
+ * - accent variant for emphasis
+ * - centered for subtle breaks
+ * 
+ * NOTES:
+ * - role="separator" for accessibility
+ * - Includes padding — don't double up with Spacer
+ */
+interface Props {
+  variant?: 'full' | 'centered' | 'accent' | string;
+}
+
+const { variant: rawVariant = 'full' } = Astro.props;
+
+// Normalize variant (Prismic may send capitalized)
+const variant = typeof rawVariant === 'string' ? rawVariant.toLowerCase() as 'full' | 'centered' | 'accent' : 'full';
+---
+
+<div class:list={['divider', `divider--${variant}`]} role="separator">
+  <hr />
+</div>
+
+<style>
+  .divider {
+    padding-block: var(--space-8);
+  }
+
+  .divider hr {
+    border: none;
+    height: 1px;
+    background-color: var(--color-text-subtle);
+  }
+
+  .divider--centered hr {
+    max-width: 200px;
+    margin-inline: auto;
+  }
+
+  .divider--accent hr {
+    height: 3px;
+    max-width: 60px;
+    background-color: var(--color-accent);
+  }
+</style>
+

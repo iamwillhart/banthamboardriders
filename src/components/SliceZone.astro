@@ -1,0 +1,139 @@
+---
+/**
+ * SliceZone
+ *
+ * Maps Prismic slices to Astro components.
+ * Add new slice mappings as you create them in Prismic.
+ *
+ * USAGE:
+ * <SliceZone slices={page.data.body} />
+ *
+ * NOTE: Prismic defaults slice zone field to "body"
+ */
+
+// Import all slice components
+// Heroes
+import HeroHomepage from "./slices/HeroHomepage.astro";
+// TODO: Add more heroes as created
+import HeroSecondary from "./slices/HeroSecondary.astro";
+
+// Content — Text
+import TextStatement from "./slices/TextStatement.astro";
+import TextProse from "./slices/TextProse.astro";
+import ImageBlock from "./slices/ImageBlock.astro";
+
+// Content — Layout
+import TwoColumn from "./slices/TwoColumn.astro";
+import Features from "./slices/Features.astro";
+import Stats from "./slices/Stats.astro";
+import Quote from "./slices/Quote.astro";
+import Accordion from "./slices/Accordion.astro";
+import ScrollAccordion from "./slices/heavy/ScrollAccordion.astro";
+
+// Events
+import EventCalendar from "./slices/EventCalendar.astro";
+import EventSchedule from "./slices/EventSchedule.astro";
+
+import CTA from "./slices/CTA.astro";
+
+// Media
+import ImageGallery from "./slices/ImageGallery.astro";
+import ImageGalleryMasonry from "./slices/ImageGalleryMasonry.astro";
+import ImageGalleryEditorial from "./slices/ImageGalleryEditorial.astro";
+import TeamGallery from "./slices/TeamGallery.astro";
+import HorizontalGallery from "./slices/heavy/HorizontalGallery.astro";
+import VideoEmbed from "./slices/VideoEmbed.astro";
+import LogoCloud from "./slices/LogoCloud.astro";
+
+// Forms
+import ContactForm from "./slices/ContactForm.astro";
+import NewsletterSignup from "./slices/NewsletterSignup.astro";
+
+// Utility
+import Spacer from "./slices/Spacer.astro";
+import Divider from "./slices/Divider.astro";
+
+// Collections
+import FeaturedItems from "./slices/FeaturedItems.astro";
+
+interface Props {
+  slices: any[];
+}
+
+const { slices } = Astro.props;
+
+/**
+ * Maps Prismic slice_type to Astro components
+ *
+ * Supports both snake_case and lowercase (Prismic can vary)
+ * When creating slices in Prismic, use snake_case for API IDs:
+ * e.g., hero_basic, two_column, contact_form
+ */
+const sliceComponents: Record<string, any> = {
+  // Heroes
+  hero_homepage: HeroHomepage,
+  herohomepage: HeroHomepage,
+  // TODO: Add more heroes as created
+  hero_secondary: HeroSecondary,
+
+  // Content — Text
+  text_statement: TextStatement,
+  text_prose: TextProse,
+  image_block: ImageBlock,
+
+  // Content — Layout
+  two_column: TwoColumn,
+  features: Features,
+  stats: Stats,
+  quote: Quote,
+  accordion: Accordion,
+  scroll_accordion: ScrollAccordion,
+  cta: CTA,
+
+  // Collections
+  featured_items: FeaturedItems,
+
+  // Events
+  event_calendar: EventCalendar,
+  eventcalendar: EventCalendar,
+  event_schedule: EventSchedule,
+  eventschedule: EventSchedule,
+
+  // Media
+  image_gallery: ImageGallery,
+  image_gallery_masonry: ImageGalleryMasonry,
+  image_gallery_editorial: ImageGalleryEditorial,
+  team_gallery: TeamGallery,
+  teamgallery: TeamGallery,
+  horizontal_gallery: HorizontalGallery,
+  video_embed: VideoEmbed,
+  logo_cloud: LogoCloud,
+
+  // Forms
+  contact_form: ContactForm,
+  newsletter_signup: NewsletterSignup,
+
+  // Utility
+  spacer: Spacer,
+  divider: Divider,
+};
+---
+
+{
+  slices.map((slice) => {
+    const Component = sliceComponents[slice.slice_type];
+
+    if (!Component) {
+      // Log warning in dev, skip in production
+      if (import.meta.env.DEV) {
+        console.warn(`No component found for slice type: ${slice.slice_type}`);
+      }
+      return null;
+    }
+
+    // Pass slice data to component
+    // - slice.primary contains main fields
+    // - slice.items contains repeatable items (for Features, FAQs, etc.)
+    return <Component {...slice.primary} items={slice.items} slice={slice} />;
+  })
+}

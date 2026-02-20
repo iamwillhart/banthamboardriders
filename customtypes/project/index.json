@@ -1,0 +1,102 @@
+{
+  "id": "project",
+  "label": "Project",
+  "format": "custom",
+  "repeatable": true,
+  "status": true,
+  "json": {
+    "Main": {
+      "uid": {
+        "type": "UID",
+        "config": {
+          "label": "URL Slug",
+          "placeholder": "project-name"
+        }
+      },
+      "title": {
+        "type": "Text",
+        "config": {
+          "label": "Project Title",
+          "placeholder": "Project name"
+        }
+      },
+      "category": {
+        "type": "Text",
+        "config": {
+          "label": "Category",
+          "placeholder": "Branding, Web Design, etc."
+        }
+      },
+      "featured_image": {
+        "type": "Image",
+        "config": {
+          "label": "Featured Image",
+          "constraint": {},
+          "thumbnails": [
+            {
+              "name": "card",
+              "width": 800,
+              "height": 600
+            }
+          ]
+        }
+      },
+      "excerpt": {
+        "type": "Text",
+        "config": {
+          "label": "Short Description",
+          "placeholder": "Brief project description for listings"
+        }
+      },
+      "date": {
+        "type": "Date",
+        "config": {
+          "label": "Project Date"
+        }
+      },
+      "client": {
+        "type": "Text",
+        "config": {
+          "label": "Client Name",
+          "placeholder": "Client or company name"
+        }
+      },
+      "body": {
+        "type": "Slices",
+        "fieldset": "Slice Zone",
+        "config": {
+          "choices": {
+            "hero_basic": { "type": "SharedSlice" },
+            "hero_with_image": { "type": "SharedSlice" },
+            "rich_text": { "type": "SharedSlice" },
+            "two_column": { "type": "SharedSlice" },
+            "features": { "type": "SharedSlice" },
+            "stats": { "type": "SharedSlice" },
+            "quote": { "type": "SharedSlice" },
+            "image_gallery": { "type": "SharedSlice" },
+            "video_embed": { "type": "SharedSlice" },
+            "spacer": { "type": "SharedSlice" },
+            "divider": { "type": "SharedSlice" },
+            "horizontal_gallery": { "type": "SharedSlice" }
+          }
+        }
+      }
+    },
+    "SEO": {
+      "meta_title": {
+        "type": "Text",
+        "config": {
+          "label": "Meta Title",
+          "placeholder": "SEO title (defaults to Project Title if empty)"
+        }
+      },
+      "meta_description": {
+        "type": "Text",
+        "config": {
+          "label": "Meta Description",
+          "placeholder": "Page description for SEO"
+        }
+      }
+    }
+  }
+}

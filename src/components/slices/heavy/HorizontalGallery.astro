@@ -1,0 +1,170 @@
+---
+/**
+ * HorizontalGallery
+ *
+ * KB RATING: C (~45KB JS — GSAP + ScrollTrigger)
+ * CARBON TIER: C (use sparingly, high-impact feature only)
+ * LAYOUT: Full-bleed (ignores gutter, always edge-to-edge)
+ *
+ * PURPOSE: Full-height images that scroll horizontally as you scroll vertically
+ *
+ * PROPS:
+ * - images (array) — { src, alt }
+ *
+ * BEHAVIOUR:
+ * - Scroll down → gallery scrolls horizontally (GSAP scrubbed)
+ * - After last image → releases to normal vertical scroll
+ * - Images: 100vh height, 40vw width (desktop), 75vw (mobile)
+ *
+ * TECHNIQUE:
+ * - Uses translate3d for GPU acceleration (matches Webflow approach)
+ * - transform-style: preserve-3d for smooth 3D context
+ * - will-change: transform for browser optimization
+ *
+ * ANIMATIONS:
+ * - [x] GSAP ScrollTrigger with scrub and pin
+ */
+
+interface GalleryImage {
+  src?: string;
+  alt?: string;
+  // Prismic format
+  image?: { url: string; alt?: string };
+}
+
+interface Props {
+  images?: GalleryImage[];
+  items?: GalleryImage[]; // Prismic sends repeatable items as "items"
+}
+
+const { images: directImages, items } = Astro.props;
+
+// Support both "images" (direct) and "items" (Prismic)
+const rawImages = directImages || items || [];
+
+// Normalize image format
+const images = rawImages
+  .map((item) => ({
+    src: item.src || item.image?.url || "",
+    alt: item.alt || item.image?.alt || "Gallery image",
+  }))
+  .filter((img) => img.src);
+---
+
+<section class="section-scroll" data-horizontal-gallery>
+  <div class="container-scroll">
+    <div class="scroll-wrap" data-gallery-track>
+      {
+        images.map((image, index) => (
+          <img
+            src={image.src}
+            alt={image.alt}
+            loading={index < 2 ? "eager" : "lazy"}
+            class="img-scroll"
+          />
+        ))
+      }
+    </div>
+  </div>
+</section>
+
+<style>
+  .section-scroll {
+    /* Outer section - GSAP will add pin-spacer after this */
+  }
+
+  .container-scroll {
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  .scroll-wrap {
+    display: flex;
+    height: 100%;
+    will-change: transform;
+    transform-style: preserve-3d;
+  }
+
+  .img-scroll {
+    flex-shrink: 0;
+    width: 40vw;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  @media (max-width: 768px) {
+    .img-scroll {
+      width: 75vw;
+    }
+  }
+</style>
+
+<script>
+  import { gsap } from "gsap";
+  import { ScrollTrigger } from "gsap/ScrollTrigger";
+
+  gsap.registerPlugin(ScrollTrigger);
+
+  function initHorizontalGallery() {
+    const galleries = document.querySelectorAll("[data-horizontal-gallery]");
+
+    galleries.forEach((gallery) => {
+      const container = gallery.querySelector(
+        ".container-scroll"
+      ) as HTMLElement;
+      const track = gallery.querySelector(
+        "[data-gallery-track]"
+      ) as HTMLElement;
+      if (!track || !container) return;
+
+      // Kill any existing ScrollTrigger on this element
+      ScrollTrigger.getAll().forEach((st) => {
+        if (st.trigger === gallery || st.trigger === container) st.kill();
+      });
+
+      // Calculate scroll distance in vw units for consistency
+      const getScrollAmount = () => {
+        const trackWidth = track.scrollWidth;
+        const viewportWidth = window.innerWidth;
+        return -(trackWidth - viewportWidth);
+      };
+
+      // Create the horizontal scroll animation using x (GSAP converts to translate3d)
+      gsap.to(track, {
+        x: getScrollAmount,
+        ease: "none",
+        scrollTrigger: {
+          trigger: container,
+          start: "top top",
+          end: () => `+=${track.scrollWidth - window.innerWidth}`,
+          pin: true,
+          scrub: 1,
+          invalidateOnRefresh: true,
+          anticipatePin: 1,
+        },
+      });
+    });
+  }
+
+  // Initialize after DOM is ready
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initHorizontalGallery);
+  } else {
+    // Small delay to ensure layout is complete
+    requestAnimationFrame(() => {
+      requestAnimationFrame(initHorizontalGallery);
+    });
+  }
+
+  // Re-init on Astro page transitions
+  document.addEventListener("astro:page-load", initHorizontalGallery);
+
+  // Refresh on resize (debounced)
+  let resizeTimeout: ReturnType<typeof setTimeout>;
+  window.addEventListener("resize", () => {
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(() => {
+      ScrollTrigger.refresh();
+    }, 250);
+  });
+</script>

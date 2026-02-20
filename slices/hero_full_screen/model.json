@@ -1,0 +1,99 @@
+{
+  "id": "hero_full_screen",
+  "type": "SharedSlice",
+  "name": "HeroFullScreen",
+  "description": "Full-viewport hero with background image and text overlay",
+  "variations": [
+    {
+      "id": "default",
+      "name": "Default",
+      "docURL": "...",
+      "version": "initial",
+      "description": "Full screen hero with background image",
+      "imageUrl": "",
+      "primary": {
+        "headline": {
+          "type": "Text",
+          "config": {
+            "label": "Headline",
+            "placeholder": "Main heading text"
+          }
+        },
+        "subheadline": {
+          "type": "Text",
+          "config": {
+            "label": "Subheadline",
+            "placeholder": "Supporting text (optional)"
+          }
+        },
+        "image": {
+          "type": "Image",
+          "config": {
+            "label": "Background Image",
+            "constraint": {
+              "width": 1920,
+              "height": 1080
+            },
+            "thumbnails": []
+          }
+        },
+        "content_position": {
+          "type": "Select",
+          "config": {
+            "label": "Content Position",
+            "placeholder": "Where to position text",
+            "options": ["left", "center", "right", "bottom-left", "bottom-right"],
+            "default_value": "bottom-right"
+          }
+        },
+        "overlay_opacity": {
+          "type": "Number",
+          "config": {
+            "label": "Overlay Opacity",
+            "placeholder": "0-100 (default 30)"
+          }
+        },
+        "min_height": {
+          "type": "Select",
+          "config": {
+            "label": "Height",
+            "placeholder": "Viewport coverage",
+            "options": ["full", "large", "medium"],
+            "default_value": "full"
+          }
+        },
+        "primary_cta_label": {
+          "type": "Text",
+          "config": {
+            "label": "Primary Button Label",
+            "placeholder": "e.g. Get Started"
+          }
+        },
+        "primary_cta_link": {
+          "type": "Link",
+          "config": {
+            "label": "Primary Button Link",
+            "placeholder": "Button destination",
+            "allowTargetBlank": true
+          }
+        },
+        "secondary_cta_label": {
+          "type": "Text",
+          "config": {
+            "label": "Secondary Button Label",
+            "placeholder": "e.g. Learn More"
+          }
+        },
+        "secondary_cta_link": {
+          "type": "Link",
+          "config": {
+            "label": "Secondary Button Link",
+            "placeholder": "Button destination",
+            "allowTargetBlank": true
+          }
+        }
+      },
+      "items": {}
+    }
+  ]
+}

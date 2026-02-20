@@ -1,0 +1,149 @@
+---
+/**
+ * TwoColumn
+ * 
+ * KB RATING: A* (0KB JS — pure CSS grid)
+ * CARBON TIER: A* (pure CSS, minimal footprint)
+ * 
+ * PURPOSE: Text and image side by side (content block, not hero)
+ * 
+ * PROPS:
+ * - eyebrow (string) — small label above headline
+ * - headline (string) — section heading (H2)
+ * - image ({ src, alt }) — section image
+ * - imagePosition ('left' | 'right') — which side
+ * 
+ * VARIANTS: imagePosition
+ * 
+ * CUSTOMISE:
+ * - Headline size (line ~52) — currently text-3xl
+ * - Image border-radius (line ~60) — currently radius-md
+ * - Use multiple in alternating pattern
+ * 
+ * ANIMATIONS:
+ * - [ ] Fade up on text
+ * - [ ] Fade in on image
+ * 
+ * PAIRS WELL WITH:
+ * - Another TwoColumn (alternating sides)
+ * - Quote (breaks up the rhythm)
+ * - Divider (between sections)
+ * 
+ * NOTES:
+ * - Uses <slot /> for body content (prose)
+ * - Great for "How it works" or "Our process" sections
+ */
+interface Props {
+  eyebrow?: string;
+  headline?: string;
+  // Direct format
+  image?: { src: string; alt: string };
+  // Prismic format
+  prismicImage?: { url: string; alt?: string };
+  content?: any[]; // Prismic rich text field
+  imagePosition?: 'left' | 'right' | string;
+  image_position?: 'left' | 'right' | string; // Prismic snake_case
+}
+
+const { 
+  eyebrow, 
+  headline, 
+  image: directImage,
+  content,
+  imagePosition: directImagePosition,
+  image_position,
+} = Astro.props;
+
+// Handle both direct format and Prismic image format
+const rawImage = directImage || (Astro.props as any).image;
+const image = rawImage ? {
+  src: rawImage.src || rawImage.url || '',
+  alt: rawImage.alt || headline || 'Section image'
+} : null;
+
+// Normalize imagePosition (support both formats)
+const rawPosition = directImagePosition || image_position || 'right';
+const imagePosition = typeof rawPosition === 'string' ? rawPosition.toLowerCase() as 'left' | 'right' : 'right';
+
+// Helper to render Prismic rich text to HTML
+const renderRichText = (richText: any[]) => {
+  if (!richText || !Array.isArray(richText)) return '';
+  return richText.map(block => {
+    if (block.type === 'paragraph') {
+      return `<p>${block.text || ''}</p>`;
+    }
+    if (block.type === 'heading1') return `<h1>${block.text || ''}</h1>`;
+    if (block.type === 'heading2') return `<h2>${block.text || ''}</h2>`;
+    if (block.type === 'heading3') return `<h3>${block.text || ''}</h3>`;
+    if (block.type === 'list-item') return `<li>${block.text || ''}</li>`;
+    return block.text || '';
+  }).join('');
+};
+---
+
+<section class:list={['two-column', `two-column--img-${imagePosition}`]}>
+  <div class="container">
+    <div class="two-column__grid">
+      <div class="two-column__content">
+        {eyebrow && <span class="two-column__eyebrow">{eyebrow}</span>}
+        {headline && <h2 class="two-column__headline">{headline}</h2>}
+        <div class="two-column__body prose">
+          {content ? <Fragment set:html={renderRichText(content)} /> : <slot />}
+        </div>
+      </div>
+      {image && (
+        <div class="two-column__media">
+          <img src={image.src} alt={image.alt} loading="lazy" />
+        </div>
+      )}
+    </div>
+  </div>
+</section>
+
+<style>
+  .two-column {
+    padding-block: var(--space-16);
+  }
+
+  .two-column__grid {
+    display: grid;
+    gap: var(--space-12);
+    align-items: center;
+  }
+
+  @media (min-width: 768px) {
+    .two-column__grid {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .two-column--img-left .two-column__media {
+      order: -1;
+    }
+  }
+
+  .two-column__eyebrow {
+    display: block;
+    font-family: var(--font-sans);
+    font-size: var(--text-xs);
+    font-weight: var(--font-medium);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-wider);
+    color: var(--color-accent);
+    margin-bottom: var(--space-3);
+  }
+
+  .two-column__headline {
+    font-family: var(--font-serif);
+    font-size: var(--text-3xl);
+    font-weight: var(--font-regular);
+    line-height: var(--leading-snug);
+    margin-bottom: var(--space-6);
+  }
+
+  .two-column__media img {
+    width: 100%;
+    height: auto;
+    border-radius: var(--radius-md);
+  }
+</style>
+

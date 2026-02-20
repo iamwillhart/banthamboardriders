@@ -1,0 +1,79 @@
+---
+/**
+ * Section Component
+ * 
+ * Standardized wrapper for all page sections.
+ * Use this in slices instead of raw <section> + container markup.
+ * 
+ * PROPS:
+ * - id: Anchor link target
+ * - class: Additional classes
+ * - spacing: 'default' | 'compact' | 'hero' | 'none'
+ * - background: 'default' | 'alt' | 'accent'
+ * - container: 'default' | 'narrow' | 'wide' | 'full' | 'none'
+ * 
+ * USAGE:
+ * <Section spacing="hero" background="alt" container="narrow">
+ *   <h1>Content here</h1>
+ * </Section>
+ * 
+ * WHEN TO USE container="none":
+ * - Full-bleed images/galleries
+ * - Custom layouts that need edge-to-edge content
+ * - Slices that handle their own container logic
+ * 
+ * WHEN TO USE spacing="none":
+ * - Stacking slices without gaps (e.g., hero + logo cloud)
+ * - Custom spacing handled in slice
+ */
+
+interface Props {
+  id?: string;
+  class?: string;
+  spacing?: 'default' | 'compact' | 'hero' | 'none';
+  background?: 'default' | 'alt' | 'accent';
+  container?: 'default' | 'narrow' | 'wide' | 'full' | 'none';
+}
+
+const { 
+  id,
+  class: className,
+  spacing = 'default',
+  background = 'default',
+  container = 'default'
+} = Astro.props;
+
+// Build section classes
+const sectionClasses = [
+  'section',
+  spacing !== 'default' && spacing !== 'none' && `section--${spacing}`,
+  spacing === 'none' && 'section--none',
+  background !== 'default' && `section--bg-${background}`,
+  className
+].filter(Boolean);
+
+// Build container classes (if container is used)
+const containerClasses = [
+  'container',
+  container !== 'default' && container !== 'none' && `container--${container}`
+].filter(Boolean);
+
+const useContainer = container !== 'none';
+---
+
+<section id={id} class:list={sectionClasses}>
+  {useContainer ? (
+    <div class:list={containerClasses}>
+      <slot />
+    </div>
+  ) : (
+    <slot />
+  )}
+</section>
+
+<style>
+  /* No-spacing variant for stacking */
+  .section--none {
+    padding-block: 0;
+  }
+</style>

@@ -1,0 +1,112 @@
+---
+/**
+ * VideoEmbed
+ * 
+ * KB RATING: A* (0KB JS — pure CSS aspect-ratio)
+ * CARBON TIER: A (iframe loads external resources)
+ * 
+ * PURPOSE: Embed YouTube or Vimeo videos
+ * 
+ * PROPS:
+ * - url (string) — YouTube or Vimeo URL (auto-converts to embed)
+ * - title (string) — accessible title for iframe
+ * - aspectRatio ('16:9' | '4:3' | '1:1') — video shape
+ * 
+ * VARIANTS: aspectRatio
+ * 
+ * CUSTOMISE:
+ * - Border radius (line ~42) — currently radius-md
+ * - Container width — inherits from parent/container
+ * 
+ * ANIMATIONS:
+ * - [ ] Fade in on scroll
+ * - [ ] Consider facade/thumbnail for performance
+ * 
+ * PAIRS WELL WITH:
+ * - RichText (context above)
+ * - Features (explain then show)
+ * - Standalone in content pages
+ * 
+ * NOTES:
+ * - Auto-converts watch URLs to embed URLs
+ * - 16:9 is standard for most videos
+ * - Consider lite-youtube-embed for performance
+ */
+interface Props {
+  url: string;
+  title?: string;
+  aspectRatio?: '16:9' | '4:3' | '1:1' | string;
+  aspect_ratio?: '16:9' | '4:3' | '1:1' | string; // Prismic snake_case
+}
+
+const { 
+  url, 
+  title = 'Video', 
+  aspectRatio: directAspectRatio,
+  aspect_ratio
+} = Astro.props;
+
+// Normalize aspectRatio (support both formats)
+const rawAspectRatio = directAspectRatio || aspect_ratio || '16:9';
+const aspectRatio = rawAspectRatio as '16:9' | '4:3' | '1:1';
+
+// Convert YouTube/Vimeo URLs to embed URLs
+function getEmbedUrl(url: string): string {
+  // YouTube
+  const youtubeMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/);
+  if (youtubeMatch) {
+    return `https://www.youtube.com/embed/${youtubeMatch[1]}`;
+  }
+  
+  // Vimeo
+  const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
+  if (vimeoMatch) {
+    return `https://player.vimeo.com/video/${vimeoMatch[1]}`;
+  }
+  
+  return url;
+}
+
+const embedUrl = getEmbedUrl(url);
+const ratioClass = aspectRatio.replace(':', '-');
+---
+
+<section class="video-embed">
+  <div class="container">
+    <div class:list={['video-embed__wrapper', `video-embed__wrapper--${ratioClass}`]}>
+      <iframe 
+        src={embedUrl}
+        title={title}
+        frameborder="0"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowfullscreen
+      ></iframe>
+    </div>
+  </div>
+</section>
+
+<style>
+  .video-embed {
+    padding-block: var(--space-12);
+  }
+
+  .video-embed__wrapper {
+    position: relative;
+    width: 100%;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+  }
+
+  .video-embed__wrapper--16-9 { aspect-ratio: 16 / 9; }
+  .video-embed__wrapper--4-3 { aspect-ratio: 4 / 3; }
+  .video-embed__wrapper--1-1 { aspect-ratio: 1 / 1; }
+
+  .video-embed__wrapper iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+  }
+</style>
+

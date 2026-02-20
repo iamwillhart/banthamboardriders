@@ -1,0 +1,153 @@
+---
+/**
+ * Features
+ *
+ * PURPOSE: Grid of feature/benefit cards with icons
+ *
+ * PROPS:
+ * - eyebrow (string) — small label above headline
+ * - headline (string) — section heading
+ * - subheadline (string) — supporting text
+ * - features/items (array) — { icon, title, description }
+ * - columns (2 | 3 | 4) — grid columns
+ *
+ * LAYOUT PROPS (passed to Section wrapper):
+ * - background ('default' | 'alt' | 'accent')
+ * - spacing ('default' | 'compact' | 'hero')
+ */
+import Section from "../Section.astro";
+
+interface Feature {
+  icon?: string;
+  title: string;
+  description: string;
+}
+
+interface Props {
+  eyebrow?: string;
+  headline?: string;
+  subheadline?: string;
+  features?: Feature[];
+  items?: Feature[];
+  columns?: 2 | 3 | 4 | string;
+  background?: "default" | "alt" | "accent";
+  spacing?: "default" | "compact" | "hero";
+}
+
+const {
+  eyebrow,
+  headline,
+  subheadline,
+  features,
+  items,
+  columns: rawColumns = 3,
+  background = "default",
+  spacing = "default",
+} = Astro.props;
+
+// Support both "features" (direct) and "items" (Prismic)
+const featureList = features || items || [];
+
+// Normalize columns
+const columns =
+  typeof rawColumns === "string"
+    ? (parseInt(rawColumns) as 2 | 3 | 4)
+    : rawColumns;
+---
+
+<Section spacing={spacing} background={background}>
+  {
+    (eyebrow || headline || subheadline) && (
+      <header class="features__header">
+        {eyebrow && <span class="features__eyebrow">{eyebrow}</span>}
+        {headline && <h2 class="features__headline">{headline}</h2>}
+        {subheadline && <p class="features__subheadline">{subheadline}</p>}
+      </header>
+    )
+  }
+  <div class:list={["features__grid", `features__grid--${columns}-col`]}>
+    {
+      featureList.map((feature) => (
+        <div class="feature-card">
+          {feature.icon && (
+            <span class="feature-card__icon">{feature.icon}</span>
+          )}
+          <h3 class="feature-card__title">{feature.title}</h3>
+          <p class="feature-card__description">{feature.description}</p>
+        </div>
+      ))
+    }
+  </div>
+</Section>
+
+<style>
+  .features__header {
+    text-align: center;
+    max-width: var(--container-md);
+    margin-inline: auto;
+    margin-bottom: var(--space-12);
+  }
+
+  .features__eyebrow {
+    display: block;
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
+    font-weight: var(--font-medium);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-wider);
+    color: var(--color-accent);
+    margin-bottom: var(--space-3);
+  }
+
+  .features__headline {
+    font-family: var(--font-serif);
+    font-size: var(--text-4xl);
+    font-weight: var(--font-medium);
+    line-height: var(--leading-snug);
+    margin-bottom: var(--space-4);
+  }
+
+  .features__subheadline {
+    font-size: var(--text-lg);
+    color: var(--color-text-muted);
+  }
+
+  .features__grid {
+    display: grid;
+    gap: var(--space-8);
+  }
+
+  .features__grid--2-col {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  }
+  .features__grid--3-col {
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  }
+  .features__grid--4-col {
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  }
+
+  .feature-card {
+    text-align: center;
+    padding: var(--space-6);
+  }
+
+  .feature-card__icon {
+    display: block;
+    font-size: var(--text-4xl);
+    margin-bottom: var(--space-4);
+  }
+
+  .feature-card__title {
+    font-family: var(--font-serif);
+    font-size: var(--text-xl);
+    font-weight: var(--font-medium);
+    margin-bottom: var(--space-3);
+  }
+
+  .feature-card__description {
+    font-size: var(--text-base);
+    color: var(--color-text-muted);
+    line-height: var(--leading-relaxed);
+  }
+</style>

@@ -1,0 +1,298 @@
+---
+/**
+ * ImageGalleryMasonry
+ *
+ * Justified row gallery — images fill the full width in rows.
+ * Each row has images at the same height. Rows are computed at
+ * build time so every row is a complete, full-width row.
+ *
+ * ============================================================
+ * 🚀 DEV-CONTROLLED
+ * ============================================================
+ *
+ * STEP 1: Target row height (line ~72)
+ *   Controls roughly how tall each row is and how many
+ *   images fit per row. Larger = fewer images per row.
+ *   - 200  → Dense, many per row
+ *   - 280  → Balanced (default)
+ *   - 400  → Large, fewer per row
+ *
+ * STEP 2: Gap (line ~73)
+ *   - 0    → No gap (seamless mosaic)
+ *   - 2    → Hairline gap
+ *   - 4    → Subtle gap (default)
+ *
+ * ============================================================
+ * 📝 PRISMIC FIELDS — Slice (image_gallery_masonry)
+ * ============================================================
+ *   Non-repeatable zone (slice.primary):
+ *   - heading (Key Text)
+ *   - description (Rich Text)
+ *   - background_colour (Select): main | secondary | accent
+ *
+ *   Repeatable zone (slice.items):
+ *   - image (Image)           — must have dimensions for layout
+ *   - image_title (Key Text)  — shown in lightbox
+ *   - image_credit (Key Text) — shown in lightbox
+ *   - image_link (Link)       — optional link
+ */
+import Section from "../Section.astro";
+import Lightbox from "../Lightbox.astro";
+import * as prismic from "@prismicio/client";
+import { linkResolver } from "../../lib/prismic";
+
+interface GalleryItem {
+  image?: {
+    url?: string;
+    alt?: string;
+    dimensions?: { width: number; height: number };
+  };
+  image_title?: string;
+  image_credit?: string;
+  image_link?: prismic.LinkField;
+}
+
+interface Props {
+  heading?: string;
+  description?: prismic.RichTextField;
+  background_colour?: "main" | "secondary" | "accent";
+  items?: GalleryItem[];
+  slice?: any;
+}
+
+const {
+  heading,
+  description,
+  background_colour = "main",
+  items = [],
+} = Astro.props;
+
+// ============================================================
+// 🔒 DEV-CONTROLLED
+// ============================================================
+const targetRowHeight = 280;
+const gapPx = 4;
+
+// Background
+const bgValue = String(background_colour || "main").toLowerCase();
+const background =
+  bgValue === "secondary" ? "alt" : bgValue === "accent" ? "accent" : "default";
+
+// Rich text
+const descriptionHtml =
+  description && Array.isArray(description) && description.length > 0
+    ? prismic.asHTML(description as prismic.RichTextField, { linkResolver })
+    : "";
+
+// Responsive srcset
+const generateSrcset = (url: string) => {
+  if (!url) return "";
+  const baseUrl = url.split("?")[0];
+  return `${baseUrl}?w=600&auto=format 600w, ${baseUrl}?w=900&auto=format 900w, ${baseUrl}?w=1200&auto=format 1200w`;
+};
+
+// Normalize items and compute aspect ratios
+const galleryItems = (items || [])
+  .map((item: GalleryItem) => {
+    const w = item.image?.dimensions?.width || 1;
+    const h = item.image?.dimensions?.height || 1;
+    return {
+      src: item.image?.url || "",
+      alt: item.image?.alt || "",
+      width: w,
+      height: h,
+      aspectRatio: w / h,
+      srcset: generateSrcset(item.image?.url || ""),
+      title: item.image_title || "",
+      credit: item.image_credit || "",
+    };
+  })
+  .filter((img) => img.src);
+
+// ============================================================
+// Row partitioning — ensures every row fills full width
+// ============================================================
+const referenceWidth = 1400; // approximate max container width (--container-2xl)
+
+type GalleryItemType = (typeof galleryItems)[number];
+const rows: GalleryItemType[][] = [];
+let currentRow: GalleryItemType[] = [];
+let currentAspectSum = 0;
+
+for (const image of galleryItems) {
+  currentRow.push(image);
+  currentAspectSum += image.aspectRatio;
+
+  // When total image width at target height exceeds container, row is full
+  const totalWidth =
+    currentAspectSum * targetRowHeight + (currentRow.length - 1) * gapPx;
+
+  if (totalWidth >= referenceWidth) {
+    rows.push([...currentRow]);
+    currentRow = [];
+    currentAspectSum = 0;
+  }
+}
+
+// Handle remaining images (last row)
+if (currentRow.length > 0) {
+  const lastRowWidth = currentAspectSum * targetRowHeight;
+  // If last row fills less than 60% of the width, merge into previous row
+  // to avoid a sparse, awkward-looking final row
+  if (rows.length > 0 && lastRowWidth < referenceWidth * 0.6) {
+    rows[rows.length - 1] = [...rows[rows.length - 1], ...currentRow];
+  } else {
+    rows.push(currentRow);
+  }
+}
+
+// Precompute global index offsets for lightbox
+const rowStartIndices = rows.map((_, i) =>
+  rows.slice(0, i).reduce((sum, row) => sum + row.length, 0),
+);
+
+// Lightbox items (flat list, same order as rendered)
+const lightboxItems = rows.flat().map((img) => ({
+  src: img.src,
+  alt: img.alt,
+  title: img.title,
+  credit: img.credit,
+}));
+
+const lightboxId = `masonry-lb-${Math.random().toString(36).slice(2, 9)}`;
+---
+
+<Section spacing="default" background={background} container="none">
+  <div class="masonry-gallery">
+    {/* Header */}
+    {
+      (heading || descriptionHtml) && (
+        <div class="masonry-gallery__header">
+          {heading && <h2 class="masonry-gallery__heading">{heading}</h2>}
+          {descriptionHtml && (
+            <div
+              class="masonry-gallery__description"
+              set:html={descriptionHtml}
+            />
+          )}
+        </div>
+      )
+    }
+
+    {/* Justified rows */}
+    {
+      rows.length > 0 && (
+        <div class="masonry-gallery__grid" style={`gap: ${gapPx}px;`}>
+          {rows.map((row, rowIndex) => (
+            <div class="masonry-gallery__row" style={`gap: ${gapPx}px;`}>
+              {row.map((image, i) => {
+                const globalIndex = rowStartIndices[rowIndex] + i;
+                return (
+                  <div
+                    class="masonry-gallery__item"
+                    style={`flex: ${image.aspectRatio} 1 0%;`}
+                    data-lightbox-target={lightboxId}
+                    data-lightbox-index={globalIndex}
+                    role="button"
+                    tabindex="0"
+                    aria-label={`View ${image.alt || image.title || "image"}`}
+                  >
+                    <img
+                      src={image.src}
+                      srcset={image.srcset}
+                      sizes="(min-width: 1400px) 30vw, (min-width: 768px) 40vw, 100vw"
+                      alt={image.alt}
+                      width={image.width}
+                      height={image.height}
+                      loading="lazy"
+                      decoding="async"
+                      class="masonry-gallery__image"
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      )
+    }
+  </div>
+</Section>
+
+<Lightbox items={lightboxItems} id={lightboxId} />
+
+<style>
+  .masonry-gallery {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-12);
+  }
+
+  /* Header */
+  .masonry-gallery__header {
+    max-width: 60ch;
+    padding-inline: var(--gutter);
+  }
+
+  .masonry-gallery__heading {
+    font-family: var(--font-serif);
+    font-size: var(--text-4xl);
+    line-height: var(--leading-snug);
+    margin-bottom: var(--space-4);
+  }
+
+  .masonry-gallery__description {
+    font-size: var(--text-lg);
+    line-height: var(--leading-relaxed);
+    color: var(--color-text-muted);
+  }
+
+  /* Grid of rows */
+  .masonry-gallery__grid {
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Each row — items fill full width via flex */
+  .masonry-gallery__row {
+    display: flex;
+    width: 100%;
+  }
+
+  /* Each item — flex set inline based on aspect ratio */
+  .masonry-gallery__item {
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+  }
+
+  .masonry-gallery__item:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: -2px;
+  }
+
+  .masonry-gallery__image {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    vertical-align: bottom;
+    transition: filter var(--transition-base);
+  }
+
+  /* Subtle hover feedback */
+  .masonry-gallery__item:hover .masonry-gallery__image {
+    filter: brightness(0.92);
+  }
+
+  /* Mobile: stack to single column for full-width images */
+  @media (max-width: 639px) {
+    .masonry-gallery__row {
+      flex-direction: column;
+    }
+
+    .masonry-gallery__item {
+      flex: none !important;
+    }
+  }
+</style>

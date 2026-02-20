@@ -1,0 +1,137 @@
+---
+/**
+ * Blog Listing
+ * 
+ * Displays all Prismic "blog_post" documents.
+ */
+import Layout from '../../layouts/Layout.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+import { client, getSettings } from '../../lib/prismic';
+
+// Fetch all blog posts and settings
+const posts = await client.getAllByType('blog_post', {
+  orderings: [{ field: 'my.blog_post.publish_date', direction: 'desc' }],
+});
+const settings = await getSettings();
+
+const title = 'Blog';
+const description = 'Thoughts, insights, and updates.';
+// Social image: settings default (no page-specific for listing pages)
+const image = settings?.data?.default_og_image?.url || '';
+
+// Format date helper
+function formatDate(dateString: string) {
+  return new Date(dateString).toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+}
+---
+
+<Layout title={title} description={description} image={image}>
+  <Header />
+  <main>
+    <section class="section section--hero">
+      <div class="container">
+        <div class="page-header">
+          <h1 class="heading-1">Blog</h1>
+          <p class="text-body-lg text-muted">Thoughts, insights, and updates.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container container--narrow">
+        {posts.length > 0 ? (
+          <div class="blog-list">
+            {posts.map((post) => (
+              <a href={`/blog/${post.uid}`} class="blog-card">
+                {post.data.featured_image?.url && (
+                  <img 
+                    src={post.data.featured_image.card?.url || post.data.featured_image.url} 
+                    alt={post.data.featured_image.alt || post.data.title}
+                    class="blog-card__image"
+                    loading="lazy"
+                  />
+                )}
+                <div class="blog-card__content">
+                  {post.data.publish_date && (
+                    <p class="blog-card__date text-small text-muted">
+                      {formatDate(post.data.publish_date)}
+                    </p>
+                  )}
+                  <h2 class="blog-card__title heading-4">{post.data.title}</h2>
+                  {post.data.excerpt && (
+                    <p class="blog-card__excerpt text-body text-muted">{post.data.excerpt}</p>
+                  )}
+                </div>
+              </a>
+            ))}
+          </div>
+        ) : (
+          <div class="empty-state">
+            <p class="text-body text-muted">No posts yet. Create some in Prismic!</p>
+          </div>
+        )}
+      </div>
+    </section>
+  </main>
+  <Footer />
+</Layout>
+
+<style>
+  .page-header {
+    text-align: center;
+    max-width: var(--container-md);
+    margin: 0 auto;
+  }
+  
+  .page-header p {
+    margin-top: var(--space-4);
+  }
+  
+  .blog-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-12);
+  }
+  
+  .blog-card {
+    display: grid;
+    gap: var(--space-6);
+    transition: opacity var(--transition-fast);
+  }
+  
+  @media (min-width: 640px) {
+    .blog-card {
+      grid-template-columns: 200px 1fr;
+      align-items: start;
+    }
+  }
+  
+  .blog-card:hover {
+    opacity: 0.8;
+  }
+  
+  .blog-card__image {
+    width: 100%;
+    aspect-ratio: 3 / 2;
+    object-fit: cover;
+    background: var(--color-bg-alt);
+  }
+  
+  .blog-card__date {
+    margin-bottom: var(--space-2);
+  }
+  
+  .blog-card__title {
+    margin-bottom: var(--space-2);
+  }
+  
+  .empty-state {
+    text-align: center;
+    padding: var(--space-16) 0;
+  }
+</style>

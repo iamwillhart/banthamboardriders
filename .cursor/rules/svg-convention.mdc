@@ -1,0 +1,39 @@
+---
+globs: "*.astro"
+description: How to store and use SVGs in this Astro starter template
+---
+
+# SVG Convention
+
+## Where SVGs live
+
+| SVG type | Location | Method |
+|---|---|---|
+| Developer-controlled artwork (logos, decorative graphics, dividers) | `src/assets/` | `?raw` import + `set:html` |
+| Favicon | `public/favicon.svg` | `<link>` in Layout head |
+| CMS-managed images (client logos, content images) | Prismic media library | `<img>` with URL from Prismic |
+| Tiny one-off icons (hamburger, arrows, chevrons) | Inline in the component | Paste SVG markup directly |
+
+## Standard pattern: `?raw` + `set:html`
+
+```astro
+---
+import artworkSvg from '../../assets/my-graphic.svg?raw';
+---
+
+<div class="artwork" set:html={artworkSvg} />
+```
+
+Style the inlined SVG with scoped CSS:
+
+```css
+.artwork :global(svg) {
+  width: 100%;
+  height: auto;
+  fill: currentColor;
+}
+```
+
+## Security: `set:html` and trusted sources only
+
+`set:html` injects raw HTML — including `<script>` tags if present. **Only use it with SVGs you control** (i.e. files committed to `src/assets/`). Never pipe user-uploaded, CMS-authored, or otherwise untrusted SVG content through `set:html`. For CMS images, use `<img>` which sandboxes the content.

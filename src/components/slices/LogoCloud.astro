@@ -1,0 +1,388 @@
+---
+/**
+ * LogoCloud
+ *
+ * KB RATING: A* (0KB JS — pure CSS)
+ * CARBON TIER: A* (pure CSS, minimal footprint)
+ *
+ * Display client/partner/sponsor logos for social proof.
+ * Supports a "featured" flag to highlight a primary sponsor
+ * (larger, full-colour, optionally separated).
+ *
+ * ============================================================
+ * 🚀 NEW CLIENT SETUP — follow these steps:
+ * ============================================================
+ *
+ * STEP 1: Logo height (line ~328)
+ *   Default: 40px — adjust to match client's logo sizes
+ *   Featured logos default to 1.5× this value
+ *
+ * STEP 2: Grayscale filter (line ~333)
+ *   Default: grayscale(100%) — keeps visual focus on content
+ *   Set to grayscale(0%) if client wants full-colour logos
+ *   Featured logos always render in full colour
+ *
+ * STEP 3: Gap between logos (line ~298)
+ *   Default: var(--space-8) vertical, var(--space-12) horizontal
+ *
+ * STEP 4: Show company names (line ~105)
+ *   Default: false — clean logo-only grid
+ *   Set to true to show names below logos
+ *
+ * STEP 5: Featured logo treatment (line ~106)
+ *   Default: true — featured logos appear larger + full colour
+ *   Set to false to treat all logos equally
+ *
+ * ============================================================
+ * 📝 PRISMIC FIELDS — Slice (logo_cloud)
+ * ============================================================
+ *   Non-repeatable zone (slice.primary):
+ *   - headline (Key Text)            — Section title (e.g., "Our Sponsors")
+ *   - description (Rich Text)        — Optional intro paragraph
+ *   - background_colour (Select)     — Section background:
+ *       • "Main" (value: main)
+ *       • "Secondary" (value: secondary)
+ *       • "Accent" (value: accent)
+ *
+ *   Repeatable zone (slice.items):
+ *   - logo (Image)                   — Logo image (includes alt text)
+ *   - name (Key Text)                — Company/sponsor name
+ *   - link (Link)                    — Optional link to company website
+ *   - is_featured (Boolean)          — Flag as main/primary sponsor
+ *
+ * ============================================================
+ * 🔒 DEV-CONTROLLED (not in Prismic)
+ * ============================================================
+ *   - showNames (true | false)        — Show company names, line ~105
+ *   - enableFeatured (true | false)   — Featured logo treatment, line ~106
+ *
+ * ============================================================
+ *
+ * ANIMATIONS:
+ * - [x] Opacity + grayscale on hover (CSS)
+ * - [ ] Marquee/scroll animation variant (future)
+ *
+ * PAIRS WELL WITH:
+ * - Directly after HeroBasic (compact spacing)
+ * - After Stats section
+ * - Before footer
+ *
+ * NOTES:
+ * - Keep logos similar heights for clean look
+ * - Grayscale keeps focus on content
+ * - Optional href makes logos clickable
+ * - Featured logos appear larger and in full colour
+ */
+import Section from "../Section.astro";
+import * as prismic from "@prismicio/client";
+import { linkResolver } from "../../lib/prismic";
+
+interface LogoItem {
+  // Prismic format
+  logo?: { url?: string; alt?: string };
+  name?: string;
+  link?: prismic.LinkField;
+  is_featured?: boolean;
+  // Direct format
+  src?: string;
+  alt?: string;
+  href?: string;
+}
+
+interface Props {
+  headline?: string;
+  description?: prismic.RichTextField;
+  background_colour?: "main" | "secondary" | "accent";
+  items?: LogoItem[];
+  logos?: LogoItem[]; // Direct prop support
+  slice?: any;
+}
+
+const {
+  headline,
+  description,
+  background_colour = "main",
+  items,
+  logos,
+} = Astro.props;
+
+// ============================================================
+// 🔒 DEV-CONTROLLED — change these per client
+// ============================================================
+const showNames = false; // Step 4: Show company names below logos
+const enableFeatured = true; // Step 5: Featured logo treatment (larger + full colour)
+// ============================================================
+
+// Normalize background
+const bgValue = String(background_colour || "main").toLowerCase();
+const background =
+  bgValue === "secondary" ? "alt" : bgValue === "accent" ? "accent" : "default";
+
+// Render rich text description
+const descriptionHtml =
+  description && Array.isArray(description) && description.length > 0
+    ? prismic.asHTML(description as prismic.RichTextField, { linkResolver })
+    : "";
+
+// Helper to extract URL from Prismic link field
+const getUrl = (link: any): string | null => {
+  if (!link) return null;
+  if (typeof link === "string") return link || null;
+  return prismic.asLink(link, { linkResolver }) || null;
+};
+
+// Support both "logos" (direct) and "items" (Prismic)
+const rawLogos = logos || items || [];
+
+// Normalize logo format (handle both direct and Prismic formats)
+const normalizedLogos = rawLogos
+  .map((item) => {
+    const src = item.src || item.logo?.url || "";
+    const alt = item.alt || item.logo?.alt || "";
+    const name = item.name || "";
+    const href = item.href || getUrl(item.link);
+    const isFeatured = item.is_featured || false;
+
+    return { src, alt, name, href, isFeatured };
+  })
+  .filter((logo) => logo.src);
+
+// Separate featured and regular logos for layout
+const featuredLogos = enableFeatured
+  ? normalizedLogos.filter((l) => l.isFeatured)
+  : [];
+const regularLogos = enableFeatured
+  ? normalizedLogos.filter((l) => !l.isFeatured)
+  : normalizedLogos;
+---
+
+<Section spacing="default" background={background} container="default">
+  <div
+    class:list={["logo-cloud", `logo-cloud__text-colour-${background_colour}`]}
+  >
+    {/* Header */}
+    {
+      (headline || descriptionHtml) && (
+        <div class="logo-cloud__header">
+          {headline && <p class="logo-cloud__headline">{headline}</p>}
+          {descriptionHtml && (
+            <div class="logo-cloud__description" set:html={descriptionHtml} />
+          )}
+        </div>
+      )
+    }
+
+    {/* Featured logos (main sponsors) */}
+    {
+      featuredLogos.length > 0 && (
+        <div class="logo-cloud__featured">
+          {featuredLogos.map((logo) => {
+            const inner = (
+              <div class="logo-cloud__item logo-cloud__item--featured">
+                <img
+                  src={logo.src}
+                  alt={logo.alt || logo.name || "Logo"}
+                  loading="lazy"
+                  decoding="async"
+                />
+                {showNames && logo.name && (
+                  <span class="logo-cloud__name">{logo.name}</span>
+                )}
+              </div>
+            );
+
+            return logo.href ? (
+              <a
+                href={logo.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="logo-cloud__link"
+              >
+                {inner}
+              </a>
+            ) : (
+              inner
+            );
+          })}
+        </div>
+      )
+    }
+
+    {/* Regular logos */}
+    {
+      regularLogos.length > 0 && (
+        <div class="logo-cloud__grid">
+          {regularLogos.map((logo) => {
+            const inner = (
+              <div class="logo-cloud__item">
+                <img
+                  src={logo.src}
+                  alt={logo.alt || logo.name || "Logo"}
+                  loading="lazy"
+                  decoding="async"
+                />
+                {showNames && logo.name && (
+                  <span class="logo-cloud__name">{logo.name}</span>
+                )}
+              </div>
+            );
+
+            return logo.href ? (
+              <a
+                href={logo.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="logo-cloud__link"
+              >
+                {inner}
+              </a>
+            ) : (
+              inner
+            );
+          })}
+        </div>
+      )
+    }
+  </div>
+</Section>
+
+<style>
+  /* ============================================================
+     BASE
+     ============================================================ */
+  .logo-cloud {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-8);
+
+    /* logo tone controls */
+    --logo-filter: grayscale(100%);
+    --logo-filter-hover: grayscale(0%);
+  }
+
+  /* ============================================================
+     HEADER
+     ============================================================ */
+  .logo-cloud__header {
+    text-align: center;
+  }
+
+  .logo-cloud__headline {
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-wider);
+    color: var(--color-text-muted);
+  }
+
+  .logo-cloud__description {
+    margin-top: var(--space-2);
+    font-size: var(--text-base);
+    line-height: var(--leading-relaxed);
+    color: var(--color-text-muted);
+    max-width: 50ch;
+    margin-inline: auto;
+  }
+
+  /* ============================================================
+     FEATURED LOGOS — Step 5: Main sponsors / primary logos
+     ============================================================ */
+  .logo-cloud__featured {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: var(--space-8) var(--space-12);
+  }
+
+  /* ============================================================
+     GRID — Step 3: Regular logos layout
+     ============================================================ */
+  .logo-cloud__grid {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: var(--space-8) var(--space-12); /* Step 3: Gap size */
+  }
+
+  /* ============================================================
+     LINK WRAPPER
+     ============================================================ */
+  .logo-cloud__link {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+  }
+
+  /* ============================================================
+     LOGO ITEM — Step 1 & Step 2: Height and grayscale
+     ============================================================ */
+  .logo-cloud__item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-2);
+    opacity: 0.6;
+    transition: opacity var(--transition-fast);
+  }
+
+  .logo-cloud__item:hover,
+  .logo-cloud__link:hover .logo-cloud__item {
+    opacity: 1;
+  }
+
+  .logo-cloud__item img {
+    height: 40px;
+    width: auto;
+    object-fit: contain;
+    filter: var(--logo-filter);
+    transition: filter var(--transition-fast);
+  }
+
+  .logo-cloud__item:hover img,
+  .logo-cloud__link:hover .logo-cloud__item img {
+    filter: var(--logo-filter-hover);
+  }
+
+  /* Featured logos — larger and full colour by default */
+  .logo-cloud__item--featured {
+    opacity: 0.85;
+  }
+
+  .logo-cloud__item--featured img {
+    height: 48px;
+    filter: var(--logo-filter);
+  }
+
+  @media (min-width: 768px) {
+    .logo-cloud__item--featured img {
+      height: 56px; /* Larger on desktop */
+    }
+  }
+
+  /* ============================================================
+     COMPANY NAME — Step 4: Shown when showNames = true
+     ============================================================ */
+  .logo-cloud__name {
+    font-family: var(--font-sans);
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+    text-align: center;
+  }
+
+  /* Accent mode: all text to --color-bg, logos forced to light tone */
+  .logo-cloud__text-colour-accent {
+    color: var(--color-bg);
+
+    /* best-effort tint for raster logos */
+    --logo-filter: brightness(0) saturate(100%) invert(100%);
+    --logo-filter-hover: brightness(0) saturate(100%) invert(100%);
+  }
+
+  .logo-cloud__text-colour-accent .logo-cloud__headline,
+  .logo-cloud__text-colour-accent .logo-cloud__description,
+  .logo-cloud__text-colour-accent .logo-cloud__name {
+    color: var(--color-bg);
+  }
+</style>

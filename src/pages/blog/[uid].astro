@@ -1,0 +1,125 @@
+---
+/**
+ * Blog Post Detail Page
+ * 
+ * Displays a single Prismic "blog_post" document.
+ */
+import Layout from '../../layouts/Layout.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+import SliceZone from '../../components/SliceZone.astro';
+import { client, getSettings } from '../../lib/prismic';
+
+// Generate static paths for all blog posts
+export async function getStaticPaths() {
+  const posts = await client.getAllByType('blog_post');
+  
+  // Filter out posts with null/undefined UIDs (incomplete drafts)
+  return posts
+    .filter((post) => post.uid)
+    .map((post) => ({
+      params: { uid: post.uid },
+      props: { post },
+    }));
+}
+
+const { post } = Astro.props;
+const slices = post.data.body || [];
+const settings = await getSettings();
+
+const title = post.data.meta_title || post.data.title || 'Blog Post';
+const description = post.data.meta_description || post.data.excerpt || '';
+// Social image: post-specific → featured image → settings default → none
+const image = post.data.meta_image?.url || post.data.featured_image?.url || settings?.data?.default_og_image?.url || '';
+
+// Format date helper
+function formatDate(dateString: string) {
+  return new Date(dateString).toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+}
+---
+
+<Layout title={title} description={description} image={image}>
+  <Header />
+  <main>
+    {/* Post header */}
+    <section class="section section--hero">
+      <div class="container container--narrow">
+        <article class="post-header">
+          {post.data.publish_date && (
+            <p class="text-label text-muted">{formatDate(post.data.publish_date)}</p>
+          )}
+          <h1 class="heading-1">{post.data.title}</h1>
+          {post.data.excerpt && (
+            <p class="text-body-lg text-muted">{post.data.excerpt}</p>
+          )}
+          {post.data.author && (
+            <p class="post-author text-small">By {post.data.author}</p>
+          )}
+        </article>
+      </div>
+    </section>
+    
+    {/* Featured image */}
+    {post.data.featured_image?.url && (
+      <section class="section section--compact">
+        <div class="container">
+          <img 
+            src={post.data.featured_image.url} 
+            alt={post.data.featured_image.alt || post.data.title}
+            class="post-image"
+          />
+        </div>
+      </section>
+    )}
+    
+    {/* Post content */}
+    <SliceZone slices={slices} />
+    
+    {/* Back link */}
+    <section class="section section--compact">
+      <div class="container container--narrow">
+        <a href="/blog" class="back-link text-label">← All Posts</a>
+      </div>
+    </section>
+  </main>
+  <Footer />
+</Layout>
+
+<style>
+  .post-header {
+    text-align: center;
+  }
+  
+  .post-header .heading-1 {
+    margin-top: var(--space-2);
+  }
+  
+  .post-header .text-body-lg {
+    margin-top: var(--space-4);
+    max-width: 50ch;
+    margin-inline: auto;
+  }
+  
+  .post-author {
+    margin-top: var(--space-6);
+  }
+  
+  .post-image {
+    width: 100%;
+    max-height: 60vh;
+    object-fit: cover;
+  }
+  
+  .back-link {
+    display: inline-block;
+    transition: opacity var(--transition-fast);
+  }
+  
+  .back-link:hover {
+    opacity: 0.6;
+  }
+</style>

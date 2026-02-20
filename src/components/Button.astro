@@ -1,0 +1,39 @@
+---
+/**
+ * Button Component
+ * Renders as <a> or <button> depending on href prop
+ */
+
+interface Props {
+  href?: string;
+  variant?: 'primary' | 'secondary' | 'ghost';
+  class?: string;
+  type?: 'button' | 'submit';
+  disabled?: boolean;
+  external?: boolean;
+}
+
+const { 
+  href, 
+  variant = 'primary',
+  class: className,
+  type = 'button',
+  disabled = false,
+  external = false
+} = Astro.props;
+
+const classes = ['btn', `btn--${variant}`, className].filter(Boolean);
+
+const externalProps = external ? { target: '_blank', rel: 'noopener noreferrer' } : {};
+---
+
+{href ? (
+  <a href={href} class:list={classes} {...externalProps}>
+    <slot />
+  </a>
+) : (
+  <button type={type} class:list={classes} disabled={disabled}>
+    <slot />
+  </button>
+)}
+

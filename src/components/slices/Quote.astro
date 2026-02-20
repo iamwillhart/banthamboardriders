@@ -1,0 +1,125 @@
+---
+/**
+ * Quote
+ *
+ * PURPOSE: Testimonial or pullquote for social proof
+ *
+ * PROPS:
+ * - quote (string) — the quote text
+ * - author (string) — who said it
+ * - role (string) — their title/company
+ * - image ({ src, alt }) — author photo
+ * - variant ('default' | 'large') — quote size
+ *
+ * LAYOUT PROPS (passed to Section wrapper):
+ * - background ('default' | 'alt' | 'accent')
+ * - spacing ('default' | 'compact' | 'hero')
+ */
+import Section from "../Section.astro";
+
+interface Props {
+  quote: string;
+  author?: string;
+  role?: string;
+  image?: { src: string; alt: string };
+  prismicImage?: { url: string; alt?: string };
+  variant?: "default" | "large" | string;
+  background?: "default" | "alt" | "accent";
+  spacing?: "default" | "compact" | "hero";
+}
+
+const {
+  quote,
+  author,
+  role,
+  image: directImage,
+  prismicImage,
+  variant: rawVariant = "default",
+  background = "default",
+  spacing = "default",
+} = Astro.props;
+
+// Handle both direct format and Prismic image format
+const rawImage = directImage || (Astro.props as any).image;
+const image = rawImage
+  ? {
+      src: rawImage.src || rawImage.url || "",
+      alt: rawImage.alt || author || "Quote author",
+    }
+  : null;
+
+// Normalize variant
+const variant =
+  typeof rawVariant === "string"
+    ? (rawVariant.toLowerCase() as "default" | "large")
+    : "default";
+---
+
+<Section spacing={spacing} background={background} container="narrow">
+  <blockquote class:list={["quote-block", `quote-block--${variant}`]}>
+    <p class="quote-block__text">{quote}</p>
+  </blockquote>
+  {
+    (author || image) && (
+      <footer class="quote-block__attribution">
+        {image && (
+          <img src={image.src} alt={image.alt} class="quote-block__image" />
+        )}
+        <div class="quote-block__author-info">
+          {author && <cite class="quote-block__author">{author}</cite>}
+          {role && <span class="quote-block__role">{role}</span>}
+        </div>
+      </footer>
+    )
+  }
+</Section>
+
+<style>
+  .quote-block {
+    text-align: center;
+    margin-bottom: var(--space-8);
+  }
+
+  .quote-block__text {
+    font-family: var(--font-serif);
+    font-size: var(--text-2xl);
+    font-style: italic;
+    line-height: var(--leading-relaxed);
+  }
+
+  .quote-block--large .quote-block__text {
+    font-size: clamp(var(--text-2xl), 4vw, var(--text-4xl));
+  }
+
+  .quote-block__attribution {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-4);
+  }
+
+  .quote-block__image {
+    width: 56px;
+    height: 56px;
+    border-radius: var(--radius-full);
+    object-fit: cover;
+  }
+
+  .quote-block__author-info {
+    display: flex;
+    flex-direction: column;
+    text-align: left;
+  }
+
+  .quote-block__author {
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
+    font-weight: var(--font-bold);
+    font-style: normal;
+  }
+
+  .quote-block__role {
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+  }
+</style>

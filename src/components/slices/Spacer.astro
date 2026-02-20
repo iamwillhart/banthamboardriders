@@ -1,0 +1,51 @@
+---
+/**
+ * Spacer
+ * 
+ * KB RATING: A* (0KB JS — pure CSS)
+ * CARBON TIER: A* (pure CSS, ~50 bytes)
+ * 
+ * PURPOSE: Add vertical space between sections
+ * 
+ * PROPS:
+ * - size ('sm' | 'md' | 'lg' | 'xl') — spacing amount
+ * 
+ * VARIANTS: size
+ * - sm: space-8 (32px)
+ * - md: space-16 (64px)
+ * - lg: space-24 (96px)
+ * - xl: space-32 (128px)
+ * 
+ * CUSTOMISE:
+ * - Adjust values in style block as needed
+ * 
+ * ANIMATIONS: None (utility component)
+ * 
+ * USAGE:
+ * - Between sections that need breathing room
+ * - md is usually the default choice
+ * - lg/xl for major section breaks
+ * 
+ * NOTES:
+ * - aria-hidden for accessibility
+ * - Prefer this over margin hacks
+ */
+interface Props {
+  size?: 'sm' | 'md' | 'lg' | 'xl' | string;
+}
+
+const { size: rawSize = 'md' } = Astro.props;
+
+// Normalize size (Prismic may send capitalized or differently cased)
+const size = typeof rawSize === 'string' ? rawSize.toLowerCase() as 'sm' | 'md' | 'lg' | 'xl' : 'md';
+---
+
+<div class:list={['spacer', `spacer--${size}`]} aria-hidden="true"></div>
+
+<style>
+  .spacer--sm { height: var(--space-8); }
+  .spacer--md { height: var(--space-16); }
+  .spacer--lg { height: var(--space-24); }
+  .spacer--xl { height: var(--space-32); }
+</style>
+
