@@ -54,9 +54,15 @@
  * ============================================================
  *
  *   variant: "transparent" | "solid" | "glass"
- *     - transparent: white text, no bg (for dark heroes)
- *     - solid: dark text on light bg (for regular pages)
+ *     - transparent: no bg, sits over the hero (text color set by textColor)
+ *     - solid: dark text on light bg (for regular pages / homepage)
  *     - glass: frosted glass effect with blur (elegant, modern)
+ *
+ *   textColor: "light" | "dark" (only affects transparent variant)
+ *     - light: white text (for dark photo heroes — HeroHomepage)
+ *     - dark: dark text (for colored/light hero backgrounds — HeroSecondary)
+ *     - Ignored when variant is "solid" or "glass"
+ *     - Page templates auto-derive this from the first slice's background
  *
  *   scrollBehavior: "none" | "solid-on-scroll" | "hide-on-scroll"
  *     - none: header stays as-is, no scroll effects
@@ -83,6 +89,7 @@ interface Props {
   class?: string;
   variant?: "transparent" | "solid" | "glass";
   scrollBehavior?: "none" | "solid-on-scroll" | "hide-on-scroll";
+  textColor?: "light" | "dark";
 }
 
 // ============================================================
@@ -92,6 +99,7 @@ const {
   class: className,
   variant = "transparent", // Options: "transparent" | "solid" | "glass" Step 6
   scrollBehavior = "solid-on-scroll", // Options: "none" | "solid-on-scroll" | "hide-on-scroll" Step 5
+  textColor = "light", // Options: "light" | "dark" — only affects transparent variant
 } = Astro.props;
 
 // Fetch global settings from Prismic
@@ -114,7 +122,12 @@ const currentPath = Astro.url.pathname;
 
 <!-- Desktop Navigation -->
 <header
-  class:list={["header", `header--${variant}`, className]}
+  class:list={[
+    "header",
+    `header--${variant}`,
+    variant === "transparent" && textColor === "dark" && "header--dark-text",
+    className,
+  ]}
   data-scroll-behavior={scrollBehavior}
   data-initial-variant={variant}
 >
@@ -547,6 +560,30 @@ const currentPath = Astro.url.pathname;
   .header--transparent .header__link:hover,
   .header--transparent .header__link.is-active {
     color: rgba(255, 255, 255, 0.7);
+  }
+
+  /* Transparent with DARK text (for light/colored hero backgrounds like HeroSecondary) */
+  .header--transparent.header--dark-text .header__logo,
+  .header--transparent.header--dark-text .header__link,
+  .header--transparent.header--dark-text .header__menu-icon span {
+    color: var(--color-text);
+  }
+
+  .header--transparent.header--dark-text .header__logo-img {
+    filter: none;
+  }
+
+  .header--transparent.header--dark-text .header__menu-icon span {
+    background-color: var(--color-text);
+  }
+
+  .header--transparent.header--dark-text .header__link {
+    color: var(--color-text);
+  }
+
+  .header--transparent.header--dark-text .header__link:hover,
+  .header--transparent.header--dark-text .header__link.is-active {
+    color: var(--color-text-muted);
   }
 
   /* Desktop Nav */

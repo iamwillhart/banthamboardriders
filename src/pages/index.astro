@@ -34,13 +34,11 @@ const description = page?.data?.meta_description || "";
 const image =
   page?.data?.meta_image?.url || settings?.data?.default_og_image?.url || "";
 
-// Header variant from Prismic field
-const headerVariant =
-  page?.data?.header_style === "Light Text" ? "transparent" : "solid";
+// Homepage: solid header (hardcoded — looks great with this layout)
 ---
 
 <Layout title={title} description={description} image={image}>
-  <Header variant={headerVariant} />
+  <Header variant="solid" scrollBehavior="none" />
   <main>
     {
       slices.length > 0 ? (

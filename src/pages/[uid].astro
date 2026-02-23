@@ -34,13 +34,40 @@ const description = page.data.meta_description || "";
 const image =
   page.data.meta_image?.url || settings?.data?.default_og_image?.url || "";
 
-// Header variant from Prismic field
-const headerVariant =
-  page.data.header_style === "Light Text" ? "transparent" : "solid";
+// ============================================================
+// Header config — auto-derived from first slice
+// ============================================================
+// Default: transparent header for inner pages (sits over the hero)
+// Override: Prismic `header_style` field can force "Solid" if needed
+const headerVariant: "transparent" | "solid" =
+  page.data.header_style === "Solid" ? "solid" : "transparent";
+
+// When transparent, match text color to the hero behind it
+let headerTextColor: "light" | "dark" = "light";
+
+const firstSlice = slices[0];
+if (
+  headerVariant === "transparent" &&
+  firstSlice?.slice_type === "hero_secondary"
+) {
+  const heroBg = firstSlice.primary?.background_colour || "accent";
+  // Light backgrounds (main, secondary) → dark header text
+  // Colored backgrounds (accent) → light header text
+  headerTextColor = ["main", "secondary"].includes(heroBg) ? "dark" : "light";
+}
+// HeroHomepage (photo bg) → default "light" text is correct
+
+// Scroll behavior follows variant (dev decision, not client concern)
+const headerScrollBehavior =
+  headerVariant === "solid" ? "none" : "solid-on-scroll";
 ---
 
 <Layout title={title} description={description} image={image}>
-  <Header variant={headerVariant} />
+  <Header
+    variant={headerVariant}
+    scrollBehavior={headerScrollBehavior}
+    textColor={headerTextColor}
+  />
   <main>
     <SliceZone slices={slices} />
   </main>
