@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@astrojs/markdoc": "^0.15.10",
-    "@fontsource/stack-sans-text": "^5.2.1",
+    "@fontsource/syne": "^5.2.7",
     "@prismicio/client": "^7.21.2",
     "astro": "^5.16.15",
     "gsap": "^3.14.1"

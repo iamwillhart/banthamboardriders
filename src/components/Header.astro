@@ -482,13 +482,13 @@ const currentPath = Astro.url.pathname;
 
   .header__container {
     width: 100%;
-    padding-inline: var(--gutter);
-    padding-block: var(--space-2);
+    padding-inline: var(--space-2);
+    padding-block: var(--space-4);
   }
 
   @media (min-width: 768px) {
     .header__container {
-      padding-inline: var(--gutter-lg);
+      padding-inline: var(--gutter);
     }
   }
 
@@ -526,14 +526,14 @@ const currentPath = Astro.url.pathname;
 
   .header__logo-img {
     display: block;
-    height: 40px;
+    height: 80px;
     width: auto;
     object-fit: contain;
   }
 
   @media (min-width: 1024px) {
     .header__logo-img {
-      height: 80px;
+      height: 100px;
     }
   }
 
@@ -609,7 +609,7 @@ const currentPath = Astro.url.pathname;
     padding: var(--space-2) var(--space-3);
     font-family: var(--font-sans);
     font-size: var(--text-sm);
-    font-weight: var(--font-regular);
+    font-weight: var(--font-bold);
     color: var(--color-text);
     border-radius: var(--radius-sm);
     transition: color var(--transition-fast);
@@ -617,7 +617,7 @@ const currentPath = Astro.url.pathname;
 
   @media (min-width: 1024px) {
     .header__link {
-      font-size: var(--text-base);
+      font-size: var(--text-lg);
     }
   }
 

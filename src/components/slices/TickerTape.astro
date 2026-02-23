@@ -1,0 +1,277 @@
+---
+/**
+ * TickerTape
+ *
+ * KB RATING: A* (0KB JS — pure CSS animation)
+ * CARBON TIER: A*
+ *
+ * Infinite horizontal scrolling ticker tape.
+ * Bold, full-width, pure CSS — no JavaScript.
+ *
+ * ============================================================
+ * 🚀 NEW CLIENT SETUP — follow these steps:
+ * ============================================================
+ *
+ * STEP 1: Speed (line ~85)
+ *   Default: 30s — lower = faster, higher = slower
+ *
+ * STEP 2: Separator character (line ~86)
+ *   Default: "✦" — change to "—", "•", "·", "/", etc.
+ *
+ * STEP 3: Background style (line ~87)
+ *   Options: "accent" | "dark" | "default"
+ *
+ * ============================================================
+ * 📝 PRISMIC FIELDS — Slice (ticker_tape)
+ * ============================================================
+ *   Non-repeatable zone (slice.primary):
+ *   - use_latest_events (Boolean) — Auto-fill with upcoming event titles
+ *
+ *   Repeatable zone (slice.items):
+ *   - label (Key Text)  — Text to display
+ *   - link (Link)       — Optional link destination
+ *
+ * ============================================================
+ * BEHAVIOUR:
+ *   1. If repeatable items exist → use those
+ *   2. Else if use_latest_events is true → fetch upcoming event titles
+ *   3. Else → fallback to "Bantham Board Riders"
+ * ============================================================
+ */
+import { client, linkResolver } from "../../lib/prismic";
+import * as prismic from "@prismicio/client";
+
+interface TickerItem {
+  label: string;
+  href?: string;
+}
+
+interface Props {
+  use_latest_events?: boolean;
+  items?: Array<{
+    label?: string;
+    link?: prismic.LinkField;
+  }>;
+  slice?: any;
+}
+
+const { use_latest_events = false, items: rawItems = [] } = Astro.props;
+
+const getUrl = (link: any): string | undefined => {
+  if (!link) return undefined;
+  if (typeof link === "string") return link;
+  const resolved = prismic.asLink(link, { linkResolver });
+  return resolved || undefined;
+};
+
+// ============================================================
+// Build ticker items with fallback chain
+// ============================================================
+let tickerItems: TickerItem[] = [];
+
+// 1. Manual items from Prismic repeatable zone
+const manualItems = (rawItems || [])
+  .filter((item) => item.label && item.label.trim() !== "")
+  .map((item) => ({
+    label: item.label!.trim(),
+    href: getUrl(item.link),
+  }));
+
+if (manualItems.length > 0) {
+  tickerItems = manualItems;
+} else if (use_latest_events) {
+  // 2. Auto-fetch upcoming event titles
+  try {
+    const now = new Date();
+    const allEvents = await client.getAllByType("event", {
+      orderings: [{ field: "my.event.start_date_time", direction: "asc" }],
+    });
+    tickerItems = allEvents
+      .filter((e) => {
+        if (!e.data.start_date_time) return false;
+        return new Date(e.data.start_date_time) >= now;
+      })
+      .slice(0, 8)
+      .map((e) => ({
+        label: e.data.title || "Untitled Event",
+        href: e.url || `/events/${e.uid}`,
+      }));
+  } catch (err) {
+    if (import.meta.env.DEV) {
+      console.warn("TickerTape: Failed to fetch events.", err);
+    }
+  }
+}
+
+// 3. Ultimate fallback
+if (tickerItems.length === 0) {
+  tickerItems = [{ label: "Bantham Board Riders" }];
+}
+
+// ============================================================
+// 🎨 DEVELOPER SETTINGS
+// ============================================================
+const speed = 300; // Step 1: seconds per loop (lower = faster)
+const separator = "•"; // Step 2: character between items
+const style = "default"; // Step 3: "accent" | "dark" | "default"
+// ============================================================
+
+// ============================================================
+// Repeat items enough times to guarantee viewport fill.
+// Few items → more repeats. Many items → fewer repeats.
+// We render 2 identical halves; animating -50% = seamless loop.
+// ============================================================
+const repeatCount = Math.max(10, Math.ceil(40 / tickerItems.length));
+const repeatedItems: TickerItem[] = [];
+for (let r = 0; r < repeatCount; r++) {
+  repeatedItems.push(...tickerItems);
+}
+---
+
+<div class:list={["ticker-tape", `ticker-tape--${style}`]}>
+  <div class="ticker-tape__track" style={`--ticker-speed: ${speed}s`}>
+    {/* Half A */}
+    <div class="ticker-tape__half" aria-hidden="false">
+      {
+        repeatedItems.map((item) => (
+          <>
+            <span class="ticker-tape__separator">{separator}</span>
+            {item.href ? (
+              <a href={item.href} class="ticker-tape__item ticker-tape__link">
+                {item.label}
+              </a>
+            ) : (
+              <span class="ticker-tape__item">{item.label}</span>
+            )}
+          </>
+        ))
+      }
+    </div>
+    {/* Half B — identical duplicate for seamless loop */}
+    <div class="ticker-tape__half" aria-hidden="true">
+      {
+        repeatedItems.map((item) => (
+          <>
+            <span class="ticker-tape__separator">{separator}</span>
+            {item.href ? (
+              <a
+                href={item.href}
+                class="ticker-tape__item ticker-tape__link"
+                tabindex="-1"
+              >
+                {item.label}
+              </a>
+            ) : (
+              <span class="ticker-tape__item">{item.label}</span>
+            )}
+          </>
+        ))
+      }
+    </div>
+  </div>
+</div>
+<style>
+  /* ============================================================
+       BASE
+       ============================================================ */
+  .ticker-tape {
+    overflow: hidden;
+    white-space: nowrap;
+    width: 100%;
+    height: 10vh;
+    height: 10dvh;
+    display: flex;
+    align-items: center;
+  }
+
+  /* ============================================================
+       STYLE VARIANTS
+       ============================================================ */
+  .ticker-tape--accent {
+    background-color: var(--color-accent);
+    color: var(--color-bg);
+  }
+
+  .ticker-tape--dark {
+    background-color: var(--color-text);
+    color: var(--color-bg);
+  }
+
+  .ticker-tape--default {
+    background-color: var(--color-bg-alt);
+    color: var(--color-text);
+  }
+
+  /* ============================================================
+       TRACK — the scrolling container
+       ============================================================ */
+  .ticker-tape__track {
+    display: flex;
+    align-items: center;
+    width: max-content;
+    animation: ticker-scroll var(--ticker-speed, 30s) linear infinite;
+  }
+
+  /* Pause on hover for accessibility / readability */
+  .ticker-tape:hover .ticker-tape__track {
+    animation-play-state: paused;
+  }
+
+  @keyframes ticker-scroll {
+    0% {
+      transform: translateX(0);
+    }
+    100% {
+      /* Move exactly one half — the second half slides in identically */
+      transform: translateX(-50%);
+    }
+  }
+
+  /* ============================================================
+       HALF — each identical block of repeated items
+       ============================================================ */
+  .ticker-tape__half {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+  }
+
+  /* ============================================================
+       ITEMS
+       ============================================================ */
+  .ticker-tape__item {
+    font-family: var(--font-serif);
+    font-weight: var(--font-bold);
+    font-size: clamp(var(--text-lg), 3vw, var(--text-2xl));
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-wider);
+    padding: 0 var(--space-4);
+    flex-shrink: 0;
+  }
+
+  .ticker-tape__link {
+    text-decoration: none;
+    color: inherit;
+    transition: opacity 0.2s ease;
+  }
+
+  .ticker-tape__link:hover {
+    opacity: 0.7;
+  }
+
+  .ticker-tape__separator {
+    font-size: var(--text-sm);
+    opacity: 0.5;
+    flex-shrink: 0;
+    padding: 0 var(--space-2);
+  }
+
+  /* ============================================================
+       REDUCED MOTION — respect user preferences
+       ============================================================ */
+  @media (prefers-reduced-motion: reduce) {
+    .ticker-tape__track {
+      animation: none;
+    }
+  }
+</style>

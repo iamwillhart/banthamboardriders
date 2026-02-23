@@ -104,7 +104,7 @@ const descriptionHtml =
     : "";
 ---
 
-<Section spacing="default" background={background} container="wide">
+<Section spacing="compact" background={background} container="wide">
   <div class="features">
     {/* Header */}
     {
@@ -194,16 +194,21 @@ const descriptionHtml =
   .features__heading {
     font-family: var(--font-serif);
     font-size: var(--text-4xl);
-    font-weight: var(--font-regular);
     line-height: var(--leading-snug);
     margin-bottom: var(--space-4);
   }
 
   .features__description {
-    max-width: 60ch;
+    max-width: 100%;
     font-size: var(--text-lg);
     color: var(--color-text-muted);
     line-height: var(--leading-relaxed);
+  }
+
+  @media (min-width: 768px) {
+    .features__description {
+      max-width: 50%;
+    }
   }
 
   /* ============================================================
@@ -290,7 +295,7 @@ const descriptionHtml =
      ============================================================ */
   .feature-card__image-wrapper {
     width: 100%;
-    aspect-ratio: 1080 / 1350;
+    aspect-ratio: 1/1;
     display: flex;
     align-items: center;
     justify-content: center;

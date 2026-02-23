@@ -29,9 +29,9 @@
   /* Cards, forms */
   --color-text: #1a1a1a;
   /* Body text */
-  --color-text-muted: rgba(26, 26, 26, 0.6);
-  --color-text-subtle: rgba(26, 26, 26, 0.2);
-  --color-accent: #a83f6b;
+  --color-text-muted: rgba(26, 26, 26, 0.8);
+  --color-text-subtle: rgba(26, 26, 26, 0.4);
+  --color-accent: #756a76;
   /* Buttons, links, highlights */
 
   /* Typography - Scale (Major Third - 1.25) */
@@ -59,15 +59,15 @@
   /* =========================
      ✏️ FONTS — CHANGE THESE
      ========================= */
-  --font-serif: 'Stack Sans Text', system-ui, sans-serif;
+  --font-serif: 'Syne', system-ui, sans-serif;
   /* Headings */
-  --font-sans: 'Stack Sans Text', system-ui, sans-serif;
+  --font-sans: 'Syne', system-ui, sans-serif;
   /* UI,labels */
 
   /* Typography - Weights */
-  --font-regular: 300;
+  --font-regular: 400;
   --font-medium: 500;
-  --font-bold: 600;
+  --font-bold: 700;
 
   /* Typography - Line Heights */
   --leading-none: 1;
@@ -229,7 +229,12 @@ h4,
 h5,
 h6 {
   font-size: inherit;
-  font-weight: inherit;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+p {
+  margin-block: 0.25rem;
 }
 
 

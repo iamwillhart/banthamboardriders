@@ -51,7 +51,11 @@ interface Props {
   // Prismic fields
   heading: string;
   tagline?: string;
-  image?: { url?: string; alt?: string };
+  image?: {
+    url?: string;
+    alt?: string;
+    mobile?: { url?: string; alt?: string };
+  };
   logo?: { url?: string; alt?: string };
   button_label?: string;
   button_link?: { url?: string } | string;
@@ -96,6 +100,9 @@ const image = prismicImage
   ? { src: prismicImage.url || "", alt: prismicImage.alt || heading || "" }
   : { src: "", alt: "" };
 
+// Mobile responsive view from Prismic (900×1600 portrait crop)
+const mobileImageSrc = prismicImage?.mobile?.url || "";
+
 // Normalize logo image (optional)
 const logo = prismicLogo
   ? { src: prismicLogo.url || "", alt: prismicLogo.alt || "" }
@@ -109,10 +116,10 @@ const primaryCta =
 // ============================================================
 // 🎨 DEVELOPER SETTINGS — change these per client (Steps 1-4)
 // ============================================================
-const contentPosition = directPosition || "bottom-left"; // Step 1 Options: "bottom-left" | "left" | "center" | "right" | "bottom-right"
+const contentPosition = directPosition || "bottom-right"; // Step 1 Options: "bottom-left" | "left" | "center" | "right" | "bottom-right"
 const minHeight = directHeight || "large"; // Step 2 Options: "large" (90vh) | "full" (100vh) | "medium" (70vh)
-const overlayOpacity = directOverlay ?? 40; // Step 3
-const containerWidth = directContainerWidth || "contained"; // Step 4 Options: "full" (aligns with nav) | "contained" (1200px, matches other slices)
+const overlayOpacity = directOverlay ?? 0; // Step 3
+const containerWidth = directContainerWidth || "full"; // Step 4 Options: "full" (aligns with nav) | "contained" (1200px, matches other slices)
 // ============================================================
 ---
 
@@ -126,7 +133,15 @@ const containerWidth = directContainerWidth || "contained"; // Step 4 Options: "
   style={`--overlay-opacity: ${overlayOpacity / 100}`}
 >
   <div class="hero-homepage__bg">
-    <img src={image.src} alt={image.alt} loading="eager" fetchpriority="high" />
+    <picture>
+      <source media="(max-width: 767px)" srcset={mobileImageSrc || image.src} />
+      <img
+        src={image.src}
+        alt={image.alt}
+        loading="eager"
+        fetchpriority="high"
+      />
+    </picture>
   </div>
 
   <div class="hero-homepage__overlay"></div>
@@ -171,6 +186,7 @@ const containerWidth = directContainerWidth || "contained"; // Step 4 Options: "
     position: relative;
     display: flex;
     width: 100%;
+    overflow: hidden;
     color: var(--color-bg);
   }
 
@@ -178,6 +194,12 @@ const containerWidth = directContainerWidth || "contained"; // Step 4 Options: "
     position: absolute;
     inset: 0;
     z-index: 0;
+  }
+
+  .hero-homepage__bg picture {
+    display: block;
+    width: 100%;
+    height: 100%;
   }
 
   .hero-homepage__bg img {
@@ -198,9 +220,10 @@ const containerWidth = directContainerWidth || "contained"; // Step 4 Options: "
      ============================================================ */
   .hero-homepage__logo {
     position: absolute;
-    top: 90%;
-
-    inset: 0;
+    top: 64px;
+    right: 0;
+    bottom: 0;
+    left: 0;
     z-index: 2;
     display: flex;
     align-items: center;
@@ -209,19 +232,24 @@ const containerWidth = directContainerWidth || "contained"; // Step 4 Options: "
   }
 
   .hero-homepage__logo img {
-    max-width: min(60%, 600px);
-    max-height: 50%;
+    max-height: 100%;
     width: auto;
     height: auto;
     object-fit: contain;
     pointer-events: auto;
-    filter: brightness(0) invert(1);
+  }
+
+  @media (min-width: 768px) {
+    .hero-homepage__logo {
+      top: 80px;
+    }
   }
 
   .hero-homepage__container {
     position: relative;
     z-index: 3;
     width: 100%;
+    min-width: 0;
     margin-inline: auto;
     padding: var(--space-16) var(--gutter);
     display: flex;
@@ -233,9 +261,9 @@ const containerWidth = directContainerWidth || "contained"; // Step 4 Options: "
     }
   }
 
-  .hero-homepage__content {
+  /* .hero-homepage__content {
     max-width: 30ch;
-  }
+  } */
 
   /* ============================================================
      CONTAINER WIDTH VARIANTS (Step 4)
@@ -306,7 +334,7 @@ const containerWidth = directContainerWidth || "contained"; // Step 4 Options: "
     justify-content: flex-end;
   }
 
-  /* Bottom Right */
+  /* Bottom Right — revert to simple version, no min() hack needed */
   .hero-homepage--bottom-right .hero-homepage__container {
     align-items: flex-end;
     justify-content: flex-end;
@@ -319,12 +347,14 @@ const containerWidth = directContainerWidth || "contained"; // Step 4 Options: "
   /* ============================================================
      TYPOGRAPHY
      ============================================================ */
+  /* HEADING — allow long words to break */
   .hero-homepage__heading {
     font-family: var(--font-serif);
     font-size: clamp(var(--text-4xl), 7vw, var(--text-6xl));
     font-weight: var(--font-medium);
     line-height: var(--leading-snug);
     text-shadow: 0 2px 20px rgba(0, 0, 0, 0.3);
+    overflow-wrap: break-word;
   }
 
   .hero-homepage__tagline {
