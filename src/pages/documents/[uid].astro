@@ -1,0 +1,57 @@
+---
+/**
+ * Document Detail Page
+ *
+ * Displays a single Prismic "document" document.
+ */
+import Layout from "../../layouts/Layout.astro";
+import Header from "../../components/Header.astro";
+import Footer from "../../components/Footer.astro";
+import SliceZone from "../../components/SliceZone.astro";
+import { client, getSettings } from "../../lib/prismic";
+
+export async function getStaticPaths() {
+  const documents = await client.getAllByType("document");
+
+  return documents
+    .filter((doc) => doc.uid)
+    .map((doc) => ({
+      params: { uid: doc.uid },
+      props: { doc },
+    }));
+}
+
+const { doc } = Astro.props;
+const slices = doc.data.body || [];
+const settings = await getSettings();
+
+const title = doc.data.meta_title || doc.data.title || "Document";
+const description = doc.data.meta_description || "";
+const image =
+  doc.data.meta_image?.url || settings?.data?.default_og_image?.url || "";
+---
+
+<Layout title={title} description={description} image={image}>
+  <Header />
+  <main>
+    <SliceZone slices={slices} />
+
+    <section class="section section--compact">
+      <div class="container">
+        <a href="/documents" class="back-link text-label">← All Documents</a>
+      </div>
+    </section>
+  </main>
+  <Footer />
+</Layout>
+
+<style>
+  .back-link {
+    display: inline-block;
+    transition: opacity var(--transition-fast);
+  }
+
+  .back-link:hover {
+    opacity: 0.6;
+  }
+</style>

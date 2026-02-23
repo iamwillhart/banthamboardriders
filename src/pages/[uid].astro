@@ -1,20 +1,20 @@
 ---
 /**
  * Dynamic Page
- * 
+ *
  * Catches all Prismic "page" documents (about, contact, services, etc.)
  * URL is determined by the document's UID in Prismic.
  */
-import Layout from '../layouts/Layout.astro';
-import Header from '../components/Header.astro';
-import Footer from '../components/Footer.astro';
-import SliceZone from '../components/SliceZone.astro';
-import { client, getSettings } from '../lib/prismic';
+import Layout from "../layouts/Layout.astro";
+import Header from "../components/Header.astro";
+import Footer from "../components/Footer.astro";
+import SliceZone from "../components/SliceZone.astro";
+import { client, getSettings } from "../lib/prismic";
 
 // Generate static paths for all pages
 export async function getStaticPaths() {
-  const pages = await client.getAllByType('page');
-  
+  const pages = await client.getAllByType("page");
+
   // Filter out pages with null/undefined UIDs (incomplete drafts)
   return pages
     .filter((page) => page.uid)
@@ -28,14 +28,19 @@ const { page } = Astro.props;
 const slices = page.data.body || [];
 const settings = await getSettings();
 
-const title = page.data.meta_title || page.data.title || 'Page';
-const description = page.data.meta_description || '';
+const title = page.data.meta_title || page.data.title || "Page";
+const description = page.data.meta_description || "";
 // Social image: page-specific → settings default → none
-const image = page.data.meta_image?.url || settings?.data?.default_og_image?.url || '';
+const image =
+  page.data.meta_image?.url || settings?.data?.default_og_image?.url || "";
+
+// Header variant from Prismic field
+const headerVariant =
+  page.data.header_style === "Light Text" ? "transparent" : "solid";
 ---
 
 <Layout title={title} description={description} image={image}>
-  <Header />
+  <Header variant={headerVariant} />
   <main>
     <SliceZone slices={slices} />
   </main>

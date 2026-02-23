@@ -97,7 +97,7 @@ const {
 // ============================================================
 // 🔒 DEV-CONTROLLED — change these per client
 // ============================================================
-const heroHeight = directHeight || "medium"; // Step 1: "large" (85vh) | "medium" (65vh) | "small" (50vh)
+const heroHeight = directHeight || "small"; // Step 1: "large" (85vh) | "medium" (65vh) | "small" (50vh)
 const textAlignment = directAlignment || "center"; // Step 2: "center" | "left"
 // ============================================================
 
@@ -192,6 +192,13 @@ const buttonClass =
     min-height: 50dvh;
   }
 
+  @media (min-width: 768px) {
+    .hero-secondary--small {
+      min-height: 50vh;
+      min-height: 50dvh;
+    }
+  }
+
   /* ============================================================
      BACKGROUND VARIANTS
      ============================================================ */
@@ -219,8 +226,8 @@ const buttonClass =
     z-index: 0;
     pointer-events: none;
     left: 0%; /* Step 4: Textural position — 0% to 100% */
-    top: -20%; /* Step 4: Textural position — 0% to 100% */
-    opacity: 0.35; /* Step 4: Textural opacity — 0.05 (subtle) to 0.4 (prominent) */
+    top: 10%; /* Step 4: Textural position — 0% to 100% */
+    opacity: 0.25; /* Step 4: Textural opacity — 0.05 (subtle) to 0.4 (prominent) */
   }
 
   .hero-secondary__textural img {
@@ -287,7 +294,8 @@ const buttonClass =
   .hero-secondary__heading {
     font-family: var(--font-serif);
     font-size: clamp(var(--text-4xl), 7vw, var(--text-6xl));
-    font-weight: var(--font-medium);
+    font-weight: var(--font-bold);
+    text-transform: uppercase;
     line-height: var(--leading-snug);
     max-width: 20ch; /* Step 3: Heading width — 15ch (tight) to 30ch (wide) */
   }

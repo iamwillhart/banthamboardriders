@@ -21,8 +21,14 @@
  * STEP 3: Update mobile footer (line ~102)
  *   Change email/contact info in mobile panel footer.
  *
- * STEP 4: Chose between hover and active dot or hover changing opacity on nav items.
+ * STEP 4: Active/hover state is a 1.5px underline that slides
+ *   in from the left. Color inherits from the link text (white
+ *   on transparent variant, dark on solid).
  *
+ * STEP 5: Update the scroll behavior
+ *
+ * STEP 6: Update the initial variant
+ *   Change the initial variant to "transparent" | "solid" | "glass"
  * ============================================================
  * 📝 USAGE EXAMPLES
  * ============================================================
@@ -84,8 +90,8 @@ interface Props {
 // ============================================================
 const {
   class: className,
-  variant = "transparent", // Options: "transparent" | "solid" | "glass"
-  scrollBehavior = "none", // Options: "none" | "solid-on-scroll" | "hide-on-scroll"
+  variant = "transparent", // Options: "transparent" | "solid" | "glass" Step 6
+  scrollBehavior = "solid-on-scroll", // Options: "none" | "solid-on-scroll" | "hide-on-scroll" Step 5
 } = Astro.props;
 
 // Fetch global settings from Prismic
@@ -96,7 +102,10 @@ const headerLogo = settings?.data?.header_logo;
 // Navigation items - update these for each project
 const navItems = [
   { label: "About", href: "/about" },
-  { label: "Projects", href: "/projects" },
+  { label: "Events", href: "/events" },
+  { label: "Training", href: "/training" },
+  { label: "Memberships", href: "/memberships" },
+  { label: "Documents", href: "/documents" },
   { label: "Contact", href: "/contact" },
 ];
 
@@ -264,20 +273,27 @@ const currentPath = Astro.url.pathname;
       const currentScrollY = window.scrollY;
 
       if (behavior === "solid-on-scroll") {
-        // Transparent → Solid on scroll
-        const shouldBeScrolled = currentScrollY > scrollThreshold;
+        // Only animate if starting from transparent or glass
+        if (initialVariant === "transparent" || initialVariant === "glass") {
+          const shouldBeScrolled = currentScrollY > scrollThreshold;
 
-        if (shouldBeScrolled !== isScrolled) {
-          isScrolled = shouldBeScrolled;
+          if (shouldBeScrolled !== isScrolled) {
+            isScrolled = shouldBeScrolled;
 
-          if (isScrolled) {
-            header.classList.remove("header--transparent");
-            header.classList.add("header--solid", "header--scrolled");
-          } else {
-            header.classList.remove("header--solid", "header--scrolled");
-            header.classList.add("header--transparent");
+            if (isScrolled) {
+              header.classList.remove("header--transparent", "header--glass");
+              header.classList.add("header--solid", "header--scrolled");
+            } else {
+              header.classList.remove("header--solid", "header--scrolled");
+              if (initialVariant === "transparent") {
+                header.classList.add("header--transparent");
+              } else if (initialVariant === "glass") {
+                header.classList.add("header--glass");
+              }
+            }
           }
         }
+        // If initialVariant is "solid", it's already solid — no scroll transition needed
       }
 
       if (behavior === "hide-on-scroll") {
@@ -386,6 +402,12 @@ const currentPath = Astro.url.pathname;
   /* ============================================================
      VARIANT: Glass (frosted blur effect)
      ============================================================ */
+
+  .header--solid {
+    position: fixed;
+    background-color: var(--color-bg);
+  }
+
   .header--glass {
     position: fixed;
     backdrop-filter: blur(100px);
@@ -399,21 +421,26 @@ const currentPath = Astro.url.pathname;
     color: var(--color-bg);
   }
 
+  .header--glass .header__logo-img {
+    filter: brightness(0) invert(1);
+  }
+
+  /* Reset when glass header hovers to solid */
+  .header--glass:hover .header__logo-img {
+    filter: none;
+  }
+
   .header--glass .header__menu-icon span {
     background-color: var(--color-bg);
   }
 
   .header--glass .header__link {
-    color: var(--color-bg); /* Full opacity by default */
+    color: var(--color-bg);
   }
 
   .header--glass .header__link:hover,
   .header--glass .header__link.is-active {
-    color: rgba(255, 255, 255, 0.7); /* Less opaque on hover */
-  }
-
-  .header--glass .header__link::before {
-    background-color: var(--color-bg); /* White dot */
+    color: rgba(255, 255, 255, 0.7);
   }
 
   /* Glass → Solid on hover (keep backdrop-filter, solid bg covers it) */
@@ -444,6 +471,7 @@ const currentPath = Astro.url.pathname;
   .header__container {
     width: 100%;
     padding-inline: var(--gutter);
+    padding-block: var(--space-2);
   }
 
   @media (min-width: 768px) {
@@ -504,21 +532,21 @@ const currentPath = Astro.url.pathname;
     color: var(--color-bg);
   }
 
+  .header--transparent .header__logo-img {
+    filter: brightness(0) invert(1);
+  }
+
   .header--transparent .header__menu-icon span {
     background-color: var(--color-bg);
   }
 
   .header--transparent .header__link {
-    color: var(--color-bg); /* Full opacity by default */
+    color: var(--color-bg);
   }
 
   .header--transparent .header__link:hover,
   .header--transparent .header__link.is-active {
-    color: rgba(255, 255, 255, 0.7); /* Less opaque on hover */
-  }
-
-  .header--transparent .header__link::before {
-    background-color: var(--color-bg); /* White dot on dark hero */
+    color: rgba(255, 255, 255, 0.7);
   }
 
   /* Desktop Nav */
@@ -545,8 +573,9 @@ const currentPath = Astro.url.pathname;
     padding: var(--space-2) var(--space-3);
     font-family: var(--font-sans);
     font-size: var(--text-sm);
-    font-weight: var(--font-regular);
-    color: var(--color-text); /* Full opacity by default */
+    font-weight: var(--font-medium);
+    text-transform: uppercase;
+    color: var(--color-text);
     border-radius: var(--radius-sm);
     transition: color var(--transition-fast);
   }
@@ -559,27 +588,26 @@ const currentPath = Astro.url.pathname;
 
   .header__link:hover,
   .header__link.is-active {
-    color: var(--color-text-muted); /* Less opaque on hover */
+    color: var(--color-text-muted);
   }
 
-  /* Dot indicator — left of text, vertically centered */
-  .header__link::before {
+  /* Underline indicator — slides in from left on hover/active */
+  .header__link::after {
     content: "";
     position: absolute;
-    left: 0;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 4px;
-    height: 4px;
-    border-radius: 50%;
+    bottom: 4px;
+    left: var(--space-3);
+    right: var(--space-3);
+    height: 1.5px;
     background-color: currentColor;
-    opacity: 0;
-    transition: opacity var(--transition-fast);
+    transform: scaleX(0);
+    transform-origin: left center;
+    transition: transform 300ms cubic-bezier(0.16, 1, 0.3, 1);
   }
 
-  .header__link:hover::before,
-  .header__link.is-active::before {
-    opacity: 1;
+  .header__link:hover::after,
+  .header__link.is-active::after {
+    transform: scaleX(1);
   }
 
   /* =========================

@@ -12,19 +12,19 @@
  * 🚀 NEW CLIENT SETUP — follow these steps:
  * ============================================================
  *
- * STEP 1: Set position (line ~93)
+ * STEP 1: Set position (line ~99)
  *   Change "bottom-left" to your chosen position.
  *   Options: "bottom-left" | "left" | "center" | "right" | "bottom-right"
  *
- * STEP 2: Set height (line ~94)
+ * STEP 2: Set height (line ~100)
  *   Change "large" to your chosen height.
  *   Options: "large" (90vh) | "full" (100vh) | "medium" (70vh)
  *
- * STEP 3: Set overlay darkness (line ~96)
+ * STEP 3: Set overlay darkness (line ~102)
  *   Change 40 to your chosen opacity (0-100).
  *   Light images need higher (50-60), dark images need lower (20-30).
  *
- * STEP 4: Set container width (line ~97)
+ * STEP 4: Set container width (line ~103)
  *   Options: "full" (text aligns with nav) | "contained" (1200px, matches other slices)
  *
  * STEP 5: Update CSS to match (bottom of file)
@@ -38,6 +38,7 @@
  *   - heading (Key Text) — main H1 text
  *   - tagline (Key Text) — supporting text
  *   - image (Image) — background image
+ *   - logo (Image) — optional centered logo overlay
  *   - button_label (Key Text) — button text
  *   - button_link (Link) — button destination
  *
@@ -51,6 +52,7 @@ interface Props {
   heading: string;
   tagline?: string;
   image?: { url?: string; alt?: string };
+  logo?: { url?: string; alt?: string };
   button_label?: string;
   button_link?: { url?: string } | string;
   // Developer overrides (for direct Astro use, rare)
@@ -71,6 +73,7 @@ const {
   heading,
   tagline,
   image: prismicImage,
+  logo: prismicLogo,
   button_label,
   button_link,
   primaryCta: directCta,
@@ -93,6 +96,11 @@ const image = prismicImage
   ? { src: prismicImage.url || "", alt: prismicImage.alt || heading || "" }
   : { src: "", alt: "" };
 
+// Normalize logo image (optional)
+const logo = prismicLogo
+  ? { src: prismicLogo.url || "", alt: prismicLogo.alt || "" }
+  : null;
+
 // Only create button if label exists — prevents empty button rendering
 const primaryCta =
   directCta ||
@@ -103,7 +111,7 @@ const primaryCta =
 // ============================================================
 const contentPosition = directPosition || "bottom-left"; // Step 1 Options: "bottom-left" | "left" | "center" | "right" | "bottom-right"
 const minHeight = directHeight || "large"; // Step 2 Options: "large" (90vh) | "full" (100vh) | "medium" (70vh)
-const overlayOpacity = directOverlay ?? 30; // Step 3
+const overlayOpacity = directOverlay ?? 40; // Step 3
 const containerWidth = directContainerWidth || "contained"; // Step 4 Options: "full" (aligns with nav) | "contained" (1200px, matches other slices)
 // ============================================================
 ---
@@ -122,6 +130,14 @@ const containerWidth = directContainerWidth || "contained"; // Step 4 Options: "
   </div>
 
   <div class="hero-homepage__overlay"></div>
+
+  {
+    logo && (
+      <div class="hero-homepage__logo">
+        <img src={logo.src} alt={logo.alt} loading="eager" />
+      </div>
+    )
+  }
 
   <div class="hero-homepage__container">
     <div class="hero-homepage__content">
@@ -177,9 +193,34 @@ const containerWidth = directContainerWidth || "contained"; // Step 4 Options: "
     z-index: 1;
   }
 
+  /* ============================================================
+     CENTERED LOGO (optional — from Prismic "logo" field)
+     ============================================================ */
+  .hero-homepage__logo {
+    position: absolute;
+    top: 90%;
+
+    inset: 0;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+  }
+
+  .hero-homepage__logo img {
+    max-width: min(60%, 600px);
+    max-height: 50%;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    pointer-events: auto;
+    filter: brightness(0) invert(1);
+  }
+
   .hero-homepage__container {
     position: relative;
-    z-index: 2;
+    z-index: 3;
     width: 100%;
     margin-inline: auto;
     padding: var(--space-16) var(--gutter);
