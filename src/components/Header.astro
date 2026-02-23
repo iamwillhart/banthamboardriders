@@ -98,7 +98,7 @@ interface Props {
 const {
   class: className,
   variant = "transparent", // Options: "transparent" | "solid" | "glass" Step 6
-  scrollBehavior = "solid-on-scroll", // Options: "none" | "solid-on-scroll" | "hide-on-scroll" Step 5
+  scrollBehavior = "none", // Options: "none" | "solid-on-scroll" | "hide-on-scroll" Step 5
   textColor = "light", // Options: "light" | "dark" — only affects transparent variant
 } = Astro.props;
 
@@ -403,8 +403,7 @@ const currentPath = Astro.url.pathname;
   /* Scrolled state: fixed position with solid background */
   .header--scrolled {
     position: fixed;
-    background-color: var(--color-bg);
-    box-shadow: var(--shadow-sm);
+    background-color: var(--color-bg-alt);
   }
 
   /* Hidden state: slides up off-screen (for hide-on-scroll behavior) */
@@ -417,8 +416,8 @@ const currentPath = Astro.url.pathname;
      ============================================================ */
 
   .header--solid {
-    position: fixed;
-    background-color: var(--color-bg);
+    position: absolute;
+    background-color: var(--color-bg-alt);
   }
 
   .header--glass {
@@ -458,7 +457,7 @@ const currentPath = Astro.url.pathname;
 
   /* Glass → Solid on hover (keep backdrop-filter, solid bg covers it) */
   .header--glass:hover {
-    background-color: var(--color-bg);
+    background-color: var(--color-bg-alt);
     border-bottom-color: var(--color-border);
     box-shadow: var(--shadow-sm);
   }
@@ -610,8 +609,7 @@ const currentPath = Astro.url.pathname;
     padding: var(--space-2) var(--space-3);
     font-family: var(--font-sans);
     font-size: var(--text-sm);
-    font-weight: var(--font-medium);
-    text-transform: uppercase;
+    font-weight: var(--font-regular);
     color: var(--color-text);
     border-radius: var(--radius-sm);
     transition: color var(--transition-fast);
