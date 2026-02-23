@@ -32,27 +32,7 @@ npm install
 const repositoryName = 'your-repo-name';
 ```
 
-### 3. Configure Routes (⚠️ IMPORTANT)
-
-In `src/lib/prismic.ts`, the `routes` array **must only include document types that exist in your Prismic repo**. Prismic validates this — if you declare a type that doesn't exist, all fetches will fail silently.
-
-```ts
-const routes: Array<{ type: string; path: string }> = [
-  // ✅ Only include types that exist in YOUR Prismic repo
-  { type: "homepage", path: "/" },
-  { type: "about", path: "/about" },
-  
-  // ❌ Don't include types you haven't created yet
-  // { type: "blog_post", path: "/blog/:uid" },  // Will break everything!
-];
-```
-
-**When adding new document types:**
-1. Create the custom type in Prismic first
-2. Then add the route to the `routes` array
-3. Create the corresponding page file in `src/pages/`
-
-### 4. Import Custom Types
+### 3. Import Custom Types
 
 In your Prismic dashboard:
 1. Go to **Custom Types**
@@ -63,7 +43,34 @@ In your Prismic dashboard:
    - `project/index.json` — Repeatable
    - `blog_post/index.json` — Repeatable
 
-### 5. Customise Design
+### 4. Configure Routes (⚠️ IMPORTANT)
+
+In `src/lib/prismic.ts`, the `routes` array **must only include document types that exist in your Prismic repo**. Prismic validates this — if you declare a type that doesn't exist, all fetches will fail silently.
+
+```ts
+const routes: Array<{ type: string; path: string }> = [
+  // ✅ Only include types that exist in YOUR Prismic repo
+  { type: "homepage", path: "/" },
+  { type: "about", path: "/about" },
+  
+  // ❌ Don't include types you aren't going to create in this repo
+  // { type: "blog_post", path: "/blog/:uid" },  // Will break everything!
+];
+```
+
+In the src/pages folder delete any pages that you're not going to use in this project. Can always reintroduce from the template site if the client does end up wanting the feature ie. a blog
+
+**When adding new document types:**
+1. Go into the Prismic repo and create the new document type
+2. Then check the correct routes are present in the `routes` array
+3. And that the correct page files in `src/pages/` are there
+4. If it feels like a document type that is important and you've put effort into creating think about recreating in the main template repo
+
+### 5. Fill out settings section on Prismic
+
+
+
+### 6. Customise Design
 
 Open `src/styles/global.css` and change:
 
@@ -74,7 +81,7 @@ Open `src/styles/global.css` and change:
 
 Everything cascades to all components.
 
-### 6. Configure Layout.astro
+### 7. Configure Layout.astro
 
 Open `src/layouts/Layout.astro` and update:
 
@@ -89,7 +96,7 @@ Open `src/layouts/Layout.astro` and update:
    - Update imports in Layout.astro
    - Update `--font-serif` and `--font-sans` in global.css
 
-### 7. Create Content & Build
+### 8. Create Content & Build
 
 ```bash
 # Start dev server
@@ -143,7 +150,7 @@ npm run build
 | `/` | `homepage` | Homepage (single type) |
 | `/about` | `page` | About page |
 | `/contact` | `page` | Contact page |
-| `/services` | `page` | Services page |
+| `/events` | `page` | Events page |
 | `/projects` | — | Project listing (auto-generated) |
 | `/projects/[slug]` | `project` | Project detail |
 | `/blog` | — | Blog listing (auto-generated) |
@@ -220,15 +227,6 @@ All styling flows from `src/styles/global.css`:
 }
 ```
 
-### Presets
-
-Quick-start schemes in `src/styles/_presets/`:
-- `warm-minimal.css` — Calm, organic
-- `dark-luxury.css` — Premium, sophisticated
-- `bold-modern.css` — Energetic, confident
-- `soft-sage.css` — Natural, trustworthy
-- `clean-mono.css` — Minimal, professional
-
 ---
 
 ## 🔧 Development
@@ -238,16 +236,6 @@ npm run dev      # Start dev server
 npm run build    # Build for production
 npm run preview  # Preview production build
 ```
-
-### Dev Tools
-
-In development, a CSS tweaker widget appears (bottom-right corner) for live customisation:
-- Switch color presets
-- Adjust colors, radius, gutter
-- Copy CSS to clipboard
-
-Remove `<DevTools />` from `src/layouts/Layout.astro` before deploying.
-
 ---
 
 ## 📦 Deployment

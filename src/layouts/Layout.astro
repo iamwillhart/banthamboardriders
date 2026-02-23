@@ -3,9 +3,9 @@ import "../styles/global.css";
 import { getSettings } from "../lib/prismic";
 
 // Self-hosted fonts (no render-blocking Google Fonts request)
-import "@fontsource/stack-sans-text/400.css";
+import "@fontsource/stack-sans-text/300.css";
 import "@fontsource/stack-sans-text/500.css";
-import "@fontsource/stack-sans-text/700.css";
+import "@fontsource/stack-sans-text/600.css";
 
 interface Props {
   title: string;
@@ -19,7 +19,8 @@ const { title, description, image } = Astro.props;
 const settings = await getSettings();
 
 // Site-wide fallback — pulled from Prismic Settings document
-const siteDescription = settings?.data?.default_meta_description || "Welcome to our website.";
+const siteDescription =
+  settings?.data?.default_meta_description || "Welcome to our website.";
 const metaDescription = description || siteDescription;
 ---
 

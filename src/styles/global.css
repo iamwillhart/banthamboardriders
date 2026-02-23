@@ -24,13 +24,13 @@
      ========================= */
   --color-bg: #fff;
   /* Page background */
-  --color-bg-alt: #e3dddd;
+  --color-bg-alt: #ddab66;
   /* Cards, forms */
   --color-text: #1a1a1a;
   /* Body text */
   --color-text-muted: rgba(26, 26, 26, 0.6);
   --color-text-subtle: rgba(26, 26, 26, 0.2);
-  --color-accent: #277060;
+  --color-accent: #a83f6b;
   /* Buttons, links, highlights */
 
   /* Typography - Scale (Major Third - 1.25) */
@@ -64,11 +64,9 @@
   /* UI,labels */
 
   /* Typography - Weights */
-  /* --font-light: 300;don't use this as a default  */
-  --font-regular: 400;
+  --font-regular: 300;
   --font-medium: 500;
-  /* --font-semibold: 600; don't use this as a default */
-  --font-bold: 700;
+  --font-bold: 600;
 
   /* Typography - Line Heights */
   --leading-none: 1;

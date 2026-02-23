@@ -15,7 +15,7 @@ import * as prismic from "@prismicio/client";
 // ============================================
 // 🔧 CHANGE THIS to your Prismic repository name
 // ============================================
-const repositoryName = "astro-with-prismic";
+const repositoryName = "bantham-boardriders";
 
 // ============================================
 // 🔧 ROUTES — define URL patterns for each document type
@@ -43,9 +43,7 @@ const routes: Array<{ type: string; path: string }> = [
   // Only add routes for types that exist in YOUR Prismic repo!
   // Prismic validates these — non-existent types will cause errors.
   { type: "page", path: "/:uid" },
-  { type: "project", path: "/projects/:uid" },
-  { type: "blog_post", path: "/blog/:uid" },
-  { type: "team_member", path: "/about/:uid" },
+  { type: "document", path: "/documents/:uid" },
   { type: "event", path: "/events/:uid" },
 ];
 
