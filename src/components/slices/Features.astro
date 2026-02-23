@@ -1,153 +1,319 @@
 ---
 /**
- * Features
+ * Features Slice
  *
- * PURPOSE: Grid of feature/benefit cards with icons
+ * KB RATING: A* (0KB JS — pure CSS)
+ * CARBON TIER: A* (images optional)
  *
- * PROPS:
- * - eyebrow (string) — small label above headline
- * - headline (string) — section heading
- * - subheadline (string) — supporting text
- * - features/items (array) — { icon, title, description }
- * - columns (2 | 3 | 4) — grid columns
+ * Displays a grid of coloured feature cards. Each card has a title pinned
+ * to the top and a description pinned to the bottom, with an optional
+ * image filling the space in between. Card colours are set by the
+ * developer in CSS (--feature-color-1 through --feature-color-8).
  *
- * LAYOUT PROPS (passed to Section wrapper):
- * - background ('default' | 'alt' | 'accent')
- * - spacing ('default' | 'compact' | 'hero')
+ * ============================================================
+ * 🚀 NEW CLIENT SETUP — follow these steps:
+ * ============================================================
+ *
+ * STEP 1: Card colours (line ~175)
+ *   Set --feature-color-1 through --feature-color-8 to match the brand.
+ *   Cards cycle through these colours in order.
+ *   Default: coral, gold, pink, tan (from design comp).
+ *
+ * STEP 2: Grid columns (line ~195)
+ *   Automatic based on item count:
+ *   - 2 items → 2-col
+ *   - 3 items → 3-col
+ *   - 4 items → 4-col
+ *   - 5 items → 5-col
+ *   - 6 items → 3-col (2 rows)
+ *   - 7+ items → 4-col
+ *   Override with data-cols attribute if needed.
+ *
+ * STEP 3: Card min-height (line ~225)
+ *   Default: 480px on desktop
+ *   - Increase for dramatic tall cards
+ *   - Decrease for compact feature grids
+ *   - Remove for auto-height based on content
+ *
+ * STEP 4: Card padding (line ~220)
+ *   Default: --space-5 (20px)
+ *   - Increase to --space-8 for spacious editorial feel
+ *   - Decrease to --space-3 for compact grids
+ *
+ * STEP 5: Image behaviour (line ~245)
+ *   Default: natural height, object-fit contain, centred
+ *   - Add aspect-ratio: 16/9 for landscape
+ *   - Add aspect-ratio: 1/1 for square
+ *   - Change object-fit to cover for cropped fill
+ *
+ *
+ * ============================================================
+ * 📝 PRISMIC FIELDS — Slice (features)
+ * ============================================================
+ *   Non-repeatable zone (slice.primary):
+ *   - heading (Key Text)              — Section title e.g. "Highlights"
+ *   - description (Rich Text)         — Optional intro paragraph
+ *   - background_colour (Select)      — Section background:
+ *       • "Main" (value: main)
+ *       • "Secondary" (value: secondary)
+ *       • "Accent" (value: accent)
+ *
+ *   Repeatable zone (slice.items):
+ *   - title (Key Text)                — Card heading
+ *   - description (Rich Text)         — Card body text
+ *   - image (Image)                   — Optional image between title & description
+ *
+ * ============================================================
  */
 import Section from "../Section.astro";
-
-interface Feature {
-  icon?: string;
-  title: string;
-  description: string;
-}
+import * as prismic from "@prismicio/client";
+import { linkResolver } from "../../lib/prismic";
 
 interface Props {
-  eyebrow?: string;
-  headline?: string;
-  subheadline?: string;
-  features?: Feature[];
-  items?: Feature[];
-  columns?: 2 | 3 | 4 | string;
-  background?: "default" | "alt" | "accent";
-  spacing?: "default" | "compact" | "hero";
+  slice: any;
 }
 
-const {
-  eyebrow,
-  headline,
-  subheadline,
-  features,
-  items,
-  columns: rawColumns = 3,
-  background = "default",
-  spacing = "default",
-} = Astro.props;
+const { slice } = Astro.props;
 
-// Support both "features" (direct) and "items" (Prismic)
-const featureList = features || items || [];
+const { heading, description, background_colour = "main" } = slice.primary;
 
-// Normalize columns
-const columns =
-  typeof rawColumns === "string"
-    ? (parseInt(rawColumns) as 2 | 3 | 4)
-    : rawColumns;
+const items = slice.items || [];
+
+// Determine grid columns from item count
+function getGridCols(count: number): number {
+  if (count <= 1) return 1;
+  if (count === 2) return 2;
+  if (count === 3) return 3;
+  if (count === 4) return 4;
+  if (count === 5) return 5;
+  if (count === 6) return 3;
+  return 4; // 7+
+}
+
+const gridCols = getGridCols(items.length);
+
+// Normalize background colour to Section's expected prop
+const bgValue = String(background_colour || "main").toLowerCase();
+const background =
+  bgValue === "secondary" ? "alt" : bgValue === "accent" ? "accent" : "default";
+
+// Safely render rich text description
+const descriptionHtml =
+  description && Array.isArray(description) && description.length > 0
+    ? prismic.asHTML(description as prismic.RichTextField, { linkResolver })
+    : "";
 ---
 
-<Section spacing={spacing} background={background}>
-  {
-    (eyebrow || headline || subheadline) && (
-      <header class="features__header">
-        {eyebrow && <span class="features__eyebrow">{eyebrow}</span>}
-        {headline && <h2 class="features__headline">{headline}</h2>}
-        {subheadline && <p class="features__subheadline">{subheadline}</p>}
-      </header>
-    )
-  }
-  <div class:list={["features__grid", `features__grid--${columns}-col`]}>
+<Section spacing="default" background={background} container="wide">
+  <div class="features">
+    {/* Header */}
     {
-      featureList.map((feature) => (
-        <div class="feature-card">
-          {feature.icon && (
-            <span class="feature-card__icon">{feature.icon}</span>
+      (heading || descriptionHtml) && (
+        <div class="features__header">
+          {heading && <h2 class="features__heading">{heading}</h2>}
+          {descriptionHtml && (
+            <div class="features__description" set:html={descriptionHtml} />
           )}
-          <h3 class="feature-card__title">{feature.title}</h3>
-          <p class="feature-card__description">{feature.description}</p>
         </div>
-      ))
+      )
+    }
+
+    {/* Grid */}
+    {
+      items.length > 0 && (
+        <div class="features__grid" data-cols={gridCols}>
+          {items.map((item: any, index: number) => {
+            const itemDescHtml =
+              item.description &&
+              Array.isArray(item.description) &&
+              item.description.length > 0
+                ? prismic.asHTML(item.description as prismic.RichTextField, {
+                    linkResolver,
+                  })
+                : "";
+
+            // Cycle through developer-set colours (1-indexed CSS vars)
+            const colorIndex = (index % 8) + 1;
+
+            return (
+              <div class="feature-card" data-color={colorIndex}>
+                <h3 class="feature-card__title">{item.title || "Untitled"}</h3>
+
+                {item.image?.url && (
+                  <div class="feature-card__image-wrapper">
+                    <img
+                      src={`${item.image.url.split("?")[0]}?auto=format&q=80&w=600`}
+                      alt={item.image.alt || ""}
+                      width={item.image.dimensions?.width || 600}
+                      height={item.image.dimensions?.height || 400}
+                      class="feature-card__image"
+                      loading="lazy"
+                      decoding="async"
+                    />
+                  </div>
+                )}
+
+                {itemDescHtml && (
+                  <div
+                    class="feature-card__description"
+                    set:html={itemDescHtml}
+                  />
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )
     }
   </div>
 </Section>
 
 <style>
-  .features__header {
-    text-align: center;
-    max-width: var(--container-md);
-    margin-inline: auto;
-    margin-bottom: var(--space-12);
+  /* ============================================================
+     CARD COLOURS — Step 1: Change these per project
+     ============================================================ */
+  .features {
+    --feature-color-1: #f97b5e; /* coral */
+    --feature-color-2: #c4b5e0; /* lavender */
+    --feature-color-3: #7ec8e3; /* sky */
+    --feature-color-4: #f5a623; /* amber */
+    --feature-color-5: #a8d5ba; /* sage */
+    --feature-color-6: #f2b5c6; /* pink */
+    --feature-color-7: #f5cf3c; /* gold */
+    --feature-color-8: #c4ad91; /* tan */
+
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-12);
   }
 
-  .features__eyebrow {
-    display: block;
-    font-family: var(--font-sans);
-    font-size: var(--text-sm);
-    font-weight: var(--font-medium);
-    text-transform: uppercase;
-    letter-spacing: var(--tracking-wider);
-    color: var(--color-accent);
-    margin-bottom: var(--space-3);
-  }
+  /* ============================================================
+     HEADER — 
+     ============================================================ */
 
-  .features__headline {
+  .features__heading {
     font-family: var(--font-serif);
     font-size: var(--text-4xl);
-    font-weight: var(--font-medium);
+    font-weight: var(--font-regular);
     line-height: var(--leading-snug);
     margin-bottom: var(--space-4);
   }
 
-  .features__subheadline {
+  .features__description {
+    max-width: 60ch;
     font-size: var(--text-lg);
     color: var(--color-text-muted);
+    line-height: var(--leading-relaxed);
   }
 
+  /* ============================================================
+     GRID — Step 2: Columns auto-calculated from item count
+     ============================================================ */
   .features__grid {
     display: grid;
-    gap: var(--space-8);
+    grid-template-columns: 1fr;
+    gap: var(--space-3);
   }
 
-  .features__grid--2-col {
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  }
-  .features__grid--3-col {
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  }
-  .features__grid--4-col {
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  @media (min-width: 640px) {
+    .features__grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
   }
 
+  @media (min-width: 1024px) {
+    .features__grid[data-cols="2"] {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    .features__grid[data-cols="3"] {
+      grid-template-columns: repeat(3, 1fr);
+    }
+    .features__grid[data-cols="4"] {
+      grid-template-columns: repeat(4, 1fr);
+    }
+    .features__grid[data-cols="5"] {
+      grid-template-columns: repeat(5, 1fr);
+    }
+  }
+
+  /* ============================================================
+     CARD — Step 3 & 4: Adjust min-height and padding
+     ============================================================ */
   .feature-card {
-    text-align: center;
-    padding: var(--space-6);
+    padding: var(--space-5);
+    display: flex;
+    flex-direction: column;
+    min-height: 320px;
   }
 
-  .feature-card__icon {
-    display: block;
-    font-size: var(--text-4xl);
-    margin-bottom: var(--space-4);
+  @media (min-width: 1024px) {
+    .feature-card {
+      min-height: 480px;
+    }
+  }
+
+  /* Map data-color to the developer-set palette */
+  .feature-card[data-color="1"] {
+    background-color: var(--feature-color-1);
+  }
+  .feature-card[data-color="2"] {
+    background-color: var(--feature-color-2);
+  }
+  .feature-card[data-color="3"] {
+    background-color: var(--feature-color-3);
+  }
+  .feature-card[data-color="4"] {
+    background-color: var(--feature-color-4);
+  }
+  .feature-card[data-color="5"] {
+    background-color: var(--feature-color-5);
+  }
+  .feature-card[data-color="6"] {
+    background-color: var(--feature-color-6);
+  }
+  .feature-card[data-color="7"] {
+    background-color: var(--feature-color-7);
+  }
+  .feature-card[data-color="8"] {
+    background-color: var(--feature-color-8);
   }
 
   .feature-card__title {
     font-family: var(--font-serif);
-    font-size: var(--text-xl);
-    font-weight: var(--font-medium);
-    margin-bottom: var(--space-3);
+    font-size: var(--text-2xl);
+    font-weight: var(--font-bold);
+    line-height: var(--leading-snug);
+  }
+
+  /* ============================================================
+     IMAGE — Step 5: Adjust aspect ratio or sizing
+     ============================================================ */
+  .feature-card__image-wrapper {
+    width: 100%;
+    aspect-ratio: 1080 / 1350;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    margin-block: var(--space-4);
+    flex-shrink: 0;
+    min-width: 0;
+  }
+
+  .feature-card__image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
   }
 
   .feature-card__description {
+    margin-top: auto;
     font-size: var(--text-base);
-    color: var(--color-text-muted);
     line-height: var(--leading-relaxed);
+  }
+
+  /* Reset prose margins inside card description */
+  .feature-card__description :global(p + p) {
+    margin-top: var(--space-2);
   }
 </style>
