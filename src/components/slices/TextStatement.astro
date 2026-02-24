@@ -30,6 +30,8 @@
  * 📝 PRISMIC FIELDS (client controls in CMS)
  * ============================================================
  *   - content (Rich Text) — the statement text
+ *   - button_label (Key Text) — optional button text
+ *   - button_link (Link) — optional button destination
  *   - background_colour (Select):
  *       • "Main colour" (value: main) — uses --color-bg
  *       • "Secondary colour" (value: secondary) — uses --color-bg-alt
@@ -38,20 +40,33 @@
  * ============================================================
  */
 import Section from "../Section.astro";
+import Button from "../Button.astro";
 import * as prismic from "@prismicio/client";
 import { linkResolver } from "../../lib/prismic";
 
 interface Props {
   content?: any;
+  button_label?: string;
+  button_link?: { url?: string } | string;
   background_colour?: "main" | "secondary" | "accent";
   spacing?: "default" | "compact" | "hero";
 }
 
 const {
   content,
+  button_label,
+  button_link,
   background_colour = "main",
   spacing = "default",
 } = Astro.props;
+
+// Helper to extract URL from Prismic link field
+// Uses prismic.asLink to handle all link types: Web, Document, Media
+const getUrl = (link: any): string | null => {
+  if (!link) return null;
+  if (typeof link === "string") return link || null;
+  return prismic.asLink(link, { linkResolver }) || null;
+};
 
 // Map client-friendly names to Section's background prop
 // Handle both lowercase and capitalized values from Prismic
@@ -62,9 +77,16 @@ const background =
 // Use Prismic's built-in HTML renderer for proper rich text handling
 // Handles bold, italic, links, lists, etc. automatically
 const htmlContent = content ? prismic.asHTML(content, { linkResolver }) : "";
+
+// Resolve button link URL
+const buttonUrl = getUrl(button_link);
+
+// Choose button variant based on background
+// global.css already handles .section--bg-accent .btn--primary color inversion
+const buttonVariant = background === "accent" ? "secondary" : "primary";
 ---
 
-<Section spacing={spacing} background={background} container="default">
+<Section spacing="compact" background={background} container="default">
   <div class="text-statement">
     {
       htmlContent ? (
@@ -75,6 +97,15 @@ const htmlContent = content ? prismic.asHTML(content, { linkResolver }) : "";
         </div>
       )
     }
+    {
+      button_label && buttonUrl && (
+        <div class="text-statement__action">
+          <Button href={buttonUrl} variant={buttonVariant}>
+            {button_label}
+          </Button>
+        </div>
+      )
+    }
   </div>
 </Section>
 
@@ -82,14 +113,16 @@ const htmlContent = content ? prismic.asHTML(content, { linkResolver }) : "";
   /* ============================================================
      LAYOUT SETTINGS — adjust per project (Steps 1-2)
      ============================================================ */
-  .text-statement__content {
-    max-width: var(--container-xl); /* Step 1: Wider for statement text */
-    margin-inline: auto; /* Step 2: Positioning */
+  .text-statement__content,
+  .text-statement__action {
+    max-width: var(--container-lg); /* Step 1: Wider for statement text */
+    margin-inline: 0 auto; /* Step 2: Positioning */
   }
 
   /* @media (min-width: 768px) {
-    .text-statement__content {
-      max-width: 80ch;            Even wider on desktop
+    .text-statement__content,
+    .text-statement__action {
+      max-width: 90ch;
     }
   } */
 
@@ -97,7 +130,7 @@ const htmlContent = content ? prismic.asHTML(content, { linkResolver }) : "";
      TYPOGRAPHY — adjust per project (Step 3)
      ============================================================ */
   .text-statement__content :global(p) {
-    font-size: clamp(var(--text-2xl), 3vw, var(--text-3xl));
+    font-size: clamp(var(--text-xl), 3vw, var(--text-2xl));
     line-height: var(--leading-snug);
     font-weight: var(--font-regular);
   }
@@ -146,5 +179,15 @@ const htmlContent = content ? prismic.asHTML(content, { linkResolver }) : "";
 
   .text-statement__content :global(em) {
     font-style: italic;
+  }
+
+  /* ============================================================
+     BUTTON — appears below the statement text, aligned right
+     ============================================================ */
+  .text-statement__action {
+    margin-top: var(--space-8);
+    display: flex;
+    justify-content: flex-end;
+    width: 100%;
   }
 </style>

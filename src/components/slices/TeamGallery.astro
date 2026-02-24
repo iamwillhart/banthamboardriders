@@ -28,14 +28,9 @@
  *   Default: 0 (sharp/editorial)
  *   Options: var(--radius-md) for softer look
  *
- * STEP 4: Marker style (line ~135)
- *   Default: "square" — small filled square before job title
- *   Options: "svg" — inline SVG icon (replace SVG markup below)
- *
- * STEP 5: Custom marker SVG (line ~140)
- *   Replace the SVG string with your own icon.
- *   Only used when markerStyle = "svg".
- *   Keep it small (~16×16) and single-colour (uses currentColor via fill).
+ * STEP 4: Marker size (line ~110)
+ *   Default: "20px"
+ *   Change to any CSS value you like.
  *
  * ============================================================
  * 📝 PRISMIC FIELDS — Slice (team_gallery)
@@ -57,15 +52,18 @@
  * ============================================================
  * 🔒 DEV-CONTROLLED (not in Prismic)
  * ============================================================
- *   - aspectRatio (square | landscape | portrait) — Image crop, line ~130
- *   - markerStyle ("square" | "svg")              — Marker before job title, line ~135
- *   - markerSvg (string)                          — Custom SVG markup, line ~140
+ *   - aspectRatio (square | landscape | portrait) — Image crop
+ *   - markerSize (string)                         — SVG marker size
  *
  * ============================================================
  */
 import Section from "../Section.astro";
 import * as prismic from "@prismicio/client";
 import { linkResolver } from "../../lib/prismic";
+import conchSvg from "../../assets/conch.svg?raw";
+import shellSvg from "../../assets/shell.svg?raw";
+import starfishSvg from "../../assets/starfish.svg?raw";
+import sunshineSvg from "../../assets/sunshine.svg?raw";
 
 interface TeamMember {
   image?: {
@@ -97,10 +95,10 @@ const {
 // 🔒 DEV-CONTROLLED — change these per project
 // ============================================================
 const aspectRatio: "square" | "landscape" | "portrait" = "square"; // Step 1: Image aspect ratio
-const markerStyle: "square" | "svg" = "square"; // Step 4: Marker style
-// Step 5: Custom marker SVG — replace with your own icon
-// Keep viewBox and use `currentColor` for fill so it inherits the marker colour
-const markerSvg = `<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><rect width="16" height="16" rx="2"/></svg>`;
+const markerSize = "20px"; // Step 4: Marker size — change to any CSS value
+
+// All four SVGs cycle through each team member
+const markerSvgs = [conchSvg, shellSvg, starfishSvg, sunshineSvg];
 
 // Normalize background
 const bgValue = String(background_colour || "main").toLowerCase();
@@ -143,7 +141,7 @@ const teamMembers = (items || [])
   .filter((member) => member.src || member.name);
 ---
 
-<Section spacing="default" background={background} container="default">
+<Section spacing="compact" background={background} container="default">
   <div class:list={["team-gallery", isAccentBg && "team-gallery--accent-bg"]}>
     {/* Header */}
     {
@@ -161,7 +159,7 @@ const teamMembers = (items || [])
     {
       teamMembers.length > 0 && (
         <div class="team-gallery__grid">
-          {teamMembers.map((member) => (
+          {teamMembers.map((member, index) => (
             <div class="team-gallery__member">
               {member.src && (
                 <div
@@ -187,11 +185,9 @@ const teamMembers = (items || [])
                 {member.jobTitle && (
                   <div class="team-gallery__role">
                     <span class="team-gallery__marker" aria-hidden="true">
-                      {markerStyle === "svg" ? (
-                        <Fragment set:html={markerSvg} />
-                      ) : (
-                        <span class="team-gallery__marker-square" />
-                      )}
+                      <Fragment
+                        set:html={markerSvgs[index % markerSvgs.length]}
+                      />
                     </span>
                     <span class="team-gallery__job-title">
                       {member.jobTitle}
@@ -234,7 +230,6 @@ const teamMembers = (items || [])
     font-family: var(--font-serif);
     font-size: var(--text-4xl);
     line-height: var(--leading-snug);
-    margin-bottom: var(--space-4);
   }
 
   .team-gallery__description {
@@ -282,7 +277,7 @@ const teamMembers = (items || [])
   .team-gallery__image-wrapper {
     position: relative;
     overflow: hidden;
-    border-radius: 0; /* Step 3: Border radius — var(--radius-md) for softer */
+    border-radius: 0.25rem; /* Step 3: Border radius — var(--radius-md) for softer */
   }
 
   /* Step 1: Aspect ratios */
@@ -324,21 +319,7 @@ const teamMembers = (items || [])
     gap: var(--space-3);
   }
 
-  /* Square marker (default) */
-  .team-gallery__marker-square {
-    display: block;
-    width: 14px;
-    height: 14px;
-    flex-shrink: 0;
-    background-color: var(--color-accent);
-  }
-
-  /* Accent bg → marker uses secondary colour */
-  .team-gallery--accent-bg .team-gallery__marker-square {
-    background-color: var(--color-bg-alt);
-  }
-
-  /* SVG marker inherits colour via currentColor */
+  /* SVG marker — takes the accent colour, overrides hardcoded fill */
   .team-gallery__marker {
     display: flex;
     align-items: center;
@@ -346,6 +327,16 @@ const teamMembers = (items || [])
     color: var(--color-accent);
   }
 
+  .team-gallery__marker :global(svg) {
+    width: 30px; /* Step 4: change this to resize markers */
+    height: auto;
+  }
+
+  .team-gallery__marker :global(svg path) {
+    fill: currentColor;
+  }
+
+  /* Accent bg → marker uses secondary colour */
   .team-gallery--accent-bg .team-gallery__marker {
     color: var(--color-bg-alt);
   }
