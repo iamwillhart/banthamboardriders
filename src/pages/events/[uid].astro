@@ -5,11 +5,14 @@
  * Displays a single Prismic "event" document.
  * Shows event header with date/time, location, category,
  * booking link, then the slice zone body.
+ *
+ * Hero uses a split layout: text left, featured image (4:5) right.
  */
 import Layout from "../../layouts/Layout.astro";
 import Header from "../../components/Header.astro";
 import Footer from "../../components/Footer.astro";
 import SliceZone from "../../components/SliceZone.astro";
+import Section from "../../components/Section.astro";
 import { client, getSettings } from "../../lib/prismic";
 import * as prismic from "@prismicio/client";
 import { linkResolver } from "../../lib/prismic";
@@ -87,15 +90,34 @@ if (startDate) {
 const bookingUrl = event.data.booking_link
   ? prismic.asLink(event.data.booking_link, { linkResolver })
   : null;
+
+const hasFeaturedImage = !!event.data.featured_image?.url;
+
+// Determine the last slice's background color
+const lastSlice = slices.length > 0 ? slices[slices.length - 1] : null;
+const lastSliceBgRaw = String(
+  lastSlice?.primary?.background_colour || "main",
+).toLowerCase();
+const lastSliceBg =
+  lastSliceBgRaw === "secondary"
+    ? "alt"
+    : lastSliceBgRaw === "accent"
+      ? "accent"
+      : "default";
 ---
 
 <Layout title={title} description={description} image={image}>
   <Header variant="solid" scrollBehavior="none" />
   <main>
-    {/* Event header — always shown */}
-    <section class="section section--hero">
-      <div class="container">
-        <div class="event-header">
+    {/* Event hero — split layout when image present */}
+    <Section
+      spacing="hero"
+      container="none"
+      class={`event-hero${hasFeaturedImage ? " event-hero--has-image" : ""}`}
+    >
+      <div class="event-hero__inner">
+        {/* Text column */}
+        <div class="event-hero__content">
           {
             event.data.category && (
               <span class="event-header__category">{event.data.category}</span>
@@ -148,43 +170,89 @@ const bookingUrl = event.data.booking_link
             )
           }
         </div>
-      </div>
-    </section>
 
-    {/* Featured image */}
-    {
-      event.data.featured_image?.url && (
-        <section class="section section--compact">
-          <div class="container container--wide">
-            <img
-              src={`${event.data.featured_image.url.split("?")[0]}?auto=format&q=80&w=1400`}
-              alt={event.data.featured_image.alt || ""}
-              width={event.data.featured_image.dimensions?.width}
-              height={event.data.featured_image.dimensions?.height}
-              class="event-hero-image"
-              loading="eager"
-              decoding="async"
-            />
-          </div>
-        </section>
-      )
-    }
+        {/* Image column */}
+        {
+          hasFeaturedImage && (
+            <div class="event-hero__image-col">
+              <img
+                src={`${event.data.featured_image.url.split("?")[0]}?auto=format&q=80&w=800`}
+                alt={event.data.featured_image.alt || ""}
+                width={event.data.featured_image.dimensions?.width}
+                height={event.data.featured_image.dimensions?.height}
+                class="event-hero__image"
+                loading="eager"
+                decoding="async"
+              />
+            </div>
+          )
+        }
+      </div>
+    </Section>
 
     <SliceZone slices={slices} />
 
-    {/* Back link */}
-    <section class="section section--compact">
-      <div class="container">
+    {/* Back link — inherits last slice's background */}
+    <Section spacing="compact" background={lastSliceBg} container="wide">
+      <div style="text-align: center;">
         <a href="/events" class="back-link text-label">← All Events</a>
       </div>
-    </section>
+    </Section>
   </main>
   <Footer />
 </Layout>
 
 <style>
-  .event-header {
+  /* ============================================================
+     Hero section — custom inline padding for edge-bleed image
+     :global() needed because .event-hero is on the Section wrapper,
+     which is rendered in Section.astro's template, not this page's.
+     ============================================================ */
+  :global(.event-hero) {
+    padding-inline: var(--gutter) 0;
+  }
+
+  @media (min-width: 768px) {
+    :global(.event-hero) {
+      padding-inline: var(--gutter-lg) 0;
+      padding-block: 0;
+    }
+  }
+
+  /* ============================================================
+     Inner grid — stacks on mobile, side-by-side on desktop
+     :global() on the parent since it's the Section wrapper
+     ============================================================ */
+  .event-hero__inner {
+    margin-inline: auto;
+  }
+
+  @media (min-width: 768px) {
+    :global(.event-hero--has-image) .event-hero__inner {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-12);
+      align-items: center;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    :global(.event-hero--has-image) .event-hero__inner {
+      gap: var(--space-16);
+    }
+  }
+
+  /* ============================================================
+     Text column
+     ============================================================ */
+  .event-hero__content {
     max-width: var(--container-md);
+  }
+
+  @media (min-width: 768px) {
+    :global(.event-hero--has-image) .event-hero__content {
+      max-width: none;
+    }
   }
 
   .event-header__category {
@@ -198,11 +266,15 @@ const bookingUrl = event.data.booking_link
     margin-bottom: var(--space-2);
   }
 
-  .event-header .heading-1 {
+  .heading-1 {
+    font-weight: var(--font-bold);
+  }
+
+  .event-hero__content .heading-1 {
     margin-top: var(--space-2);
   }
 
-  .event-header .text-body-lg {
+  .event-hero__content .text-body-lg {
     margin-top: var(--space-4);
   }
 
@@ -225,15 +297,36 @@ const bookingUrl = event.data.booking_link
     margin-top: var(--space-8);
   }
 
-  .event-hero-image {
-    width: 100%;
-    height: auto;
-    display: block;
+  /* ============================================================
+     Image column
+     ============================================================ */
+  .event-hero__image-col {
+    margin-top: var(--space-10);
   }
 
+  @media (min-width: 768px) {
+    .event-hero__image-col {
+      margin-top: 0;
+    }
+  }
+
+  .event-hero__image {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 4 / 5;
+    object-fit: cover;
+    display: block;
+    border-radius: none;
+  }
+
+  /* ============================================================
+     Back link
+     ============================================================ */
   .back-link {
     display: inline-block;
     transition: opacity var(--transition-fast);
+    margin-bottom: var(--space-20);
+    margin-right: var(--space-12);
   }
 
   .back-link:hover {

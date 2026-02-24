@@ -98,7 +98,7 @@ const {
 // 🔒 DEV-CONTROLLED — change these per client
 // ============================================================
 const heroHeight = directHeight || "small"; // Step 1: "large" (85vh) | "medium" (65vh) | "small" (50vh)
-const textAlignment = directAlignment || "center"; // Step 2: "center" | "left"
+const textAlignment = directAlignment || "left"; // Step 2: "center" | "left"
 // ============================================================
 
 // Prismic link helper
@@ -188,8 +188,8 @@ const buttonClass =
   }
 
   .hero-secondary--small {
-    min-height: 50vh;
-    min-height: 50dvh;
+    min-height: 40vh;
+    min-height: 40dvh;
   }
 
   @media (min-width: 768px) {
@@ -262,6 +262,7 @@ const buttonClass =
     display: flex;
     flex-direction: column;
     gap: var(--space-4);
+    margin-top: var(--space-8);
   }
 
   /* ============================================================
