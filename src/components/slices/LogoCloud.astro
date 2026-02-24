@@ -156,18 +156,15 @@ const regularLogos = enableFeatured
   : normalizedLogos;
 ---
 
-<Section spacing="default" background={background} container="default">
+<Section spacing="compact" background={background} container="wide">
   <div
     class:list={["logo-cloud", `logo-cloud__text-colour-${background_colour}`]}
   >
-    {/* Header */}
+    {/* Headline */}
     {
-      (headline || descriptionHtml) && (
+      headline && (
         <div class="logo-cloud__header">
-          {headline && <p class="logo-cloud__headline">{headline}</p>}
-          {descriptionHtml && (
-            <div class="logo-cloud__description" set:html={descriptionHtml} />
-          )}
+          <p class="logo-cloud__headline">{headline}</p>
         </div>
       )
     }
@@ -243,6 +240,13 @@ const regularLogos = enableFeatured
         </div>
       )
     }
+
+    {/* Description */}
+    {
+      descriptionHtml && (
+        <div class="logo-cloud__description" set:html={descriptionHtml} />
+      )
+    }
   </div>
 </Section>
 
@@ -254,6 +258,7 @@ const regularLogos = enableFeatured
     display: flex;
     flex-direction: column;
     gap: var(--space-8);
+    margin-bottom: var(--space-12);
 
     /* logo tone controls
     --logo-filter: grayscale(100%);

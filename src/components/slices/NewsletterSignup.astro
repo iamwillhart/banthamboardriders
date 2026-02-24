@@ -31,8 +31,10 @@
  *   - "centered" (default) — everything centred, like the screenshot
  *   - "inline"             — description left, form right on desktop
  *
- * STEP 5: Section background
+ * STEP 5: Card background
  *   Driven by Prismic `background_colour` field (main / secondary / accent).
+ *   Applies to the inner card only — the section always stays "main".
+ *   Section spacing controls how much "main" shows around the card.
  *
  * ============================================================
  * 📝 PRISMIC FIELDS — Slice (newsletter_signup)
@@ -41,7 +43,7 @@
  *   - description (Key Text)        — line of text above the form
  *   - placeholder (Key Text)        — input placeholder text
  *   - submit_label (Key Text)       — button text (fallback: "Send")
- *   - background_colour (Select)    — Section background:
+ *   - background_colour (Select)    — Card background:
  *       • "Main" (value: main)
  *       • "Secondary" (value: secondary)
  *       • "Accent" (value: accent)
@@ -119,9 +121,9 @@ const submitLabel = submit_label || "Send"; // Step 3: button text
 const layout: "centered" | "inline" = "centered"; // Step 4: layout variant
 // ============================================================
 
-// Normalize background
+// Normalize background → used for card colour (not section)
 const bgValue = String(background_colour || "main").toLowerCase();
-const background =
+const cardBg =
   bgValue === "secondary" ? "alt" : bgValue === "accent" ? "accent" : "default";
 
 const isAccentBg = bgValue === "accent";
@@ -131,11 +133,15 @@ const descriptionText = description || "";
 const placeholderText = placeholder || "Join our mailing list";
 ---
 
-<Section spacing="default" background={background} container="narrow">
+{
+  /* Section always stays "main" — spacing controls visible main-bg around card */
+}
+<Section spacing="compact" background="default" container="default">
   <div
     class:list={[
       "newsletter",
       `newsletter--${layout}`,
+      `newsletter--bg-${cardBg}`,
       isAccentBg && "newsletter--accent-bg",
     ]}
   >
@@ -198,7 +204,7 @@ const placeholderText = placeholder || "Join our mailing list";
 
 <style>
   /* ============================================================
-     BASE
+     BASE — acts as a "card" with its own background + padding
      ============================================================ */
   .newsletter {
     display: flex;
@@ -206,6 +212,38 @@ const placeholderText = placeholder || "Join our mailing list";
     align-items: center;
     text-align: center;
     gap: var(--space-8);
+    padding: var(--space-12) var(--space-8);
+  }
+
+  @media (min-width: 768px) {
+    .newsletter {
+      padding: var(--space-16) var(--space-12);
+    }
+  }
+
+  /* ============================================================
+     CARD BACKGROUNDS — driven by Prismic background_colour
+     ============================================================ */
+
+  /* Main — no visible card (transparent, blends with section) */
+  .newsletter--bg-default {
+    background-color: transparent;
+  }
+
+  /* Secondary — alt background on the card */
+  .newsletter--bg-alt {
+    background-color: var(--color-bg-alt);
+  }
+
+  /* Accent — accent background on the card, light text */
+  .newsletter--bg-accent {
+    background-color: var(--color-accent);
+    color: var(--color-bg);
+  }
+
+  .newsletter--bg-accent .btn--primary {
+    background-color: var(--color-bg);
+    color: var(--color-accent);
   }
 
   /* ============================================================
@@ -241,6 +279,7 @@ const placeholderText = placeholder || "Join our mailing list";
     font-size: var(--text-lg);
     line-height: var(--leading-relaxed);
     max-width: 50ch;
+    margin: 0;
   }
 
   /* Accent bg — softer text */
@@ -257,6 +296,7 @@ const placeholderText = placeholder || "Join our mailing list";
     gap: var(--space-3);
     width: 100%;
     max-width: 500px;
+    margin-bottom: var(--space-4);
   }
 
   .newsletter__input {

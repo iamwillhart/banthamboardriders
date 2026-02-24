@@ -14,6 +14,7 @@ export { default as HeroSecondary } from './HeroSecondary.astro';
 export { default as TextStatement } from './TextStatement.astro';
 export { default as TextProse } from './TextProse.astro';
 export { default as ImageBlock } from './ImageBlock.astro';
+export { default as TickerTape } from './TickerTape.astro';
 
 // Content — Layout
 export { default as TwoColumn } from './TwoColumn.astro';

@@ -4,24 +4,25 @@
  *
  * Traditional grid gallery — uniform columns with fixed aspect ratio.
  * Click opens lightbox showing title, counter, and credit.
- * No captions or metadata shown on the grid itself.
+ * Items without images show a coloured placeholder panel with the
+ * first letter of the title centred in a muted tone.
  *
  * ============================================================
  * 🚀 DEV-CONTROLLED — change per project
  * ============================================================
  *
- * STEP 1: Grid columns (line ~76)
+ * STEP 1: Grid columns (line ~78)
  *   - 2  → Editorial pairs, case studies
  *   - 3  → Portfolio, general gallery
  *   - 4  → Thumbnails
  *   - 6  → Logo/icon grids, dense archive
  *
- * STEP 2: Aspect ratio (line ~77)
+ * STEP 2: Aspect ratio (line ~79)
  *   - "square"    → 1/1 (clean editorial grid)
  *   - "landscape" → 3/2 (wider, good for photos)
  *   - "portrait"  → 2/3 (tall, fashion/people)
  *
- * STEP 3: Gap (line ~78–79)
+ * STEP 3: Gap (line ~80–81)
  *   - "tight"   → var(--space-2)
  *   - "default" → var(--space-4)
  *   - "loose"   → var(--space-6)
@@ -98,7 +99,7 @@ const generateSrcset = (url: string) => {
   return `${baseUrl}?w=600&auto=format 600w, ${baseUrl}?w=900&auto=format 900w, ${baseUrl}?w=1200&auto=format 1200w`;
 };
 
-// Normalize items
+// Normalize items — keep items with image OR title
 const galleryItems = (items || [])
   .map((item: GalleryItem) => ({
     src: item.image?.url || "",
@@ -108,21 +109,33 @@ const galleryItems = (items || [])
     srcset: generateSrcset(item.image?.url || ""),
     title: item.image_title || "",
     credit: item.image_credit || "",
+    hasImage: Boolean(item.image?.url),
   }))
-  .filter((img) => img.src);
+  .filter((img) => img.src || img.title);
 
-// Lightbox items
-const lightboxItems = galleryItems.map((img) => ({
-  src: img.src,
-  alt: img.alt,
-  title: img.title,
-  credit: img.credit,
-}));
+// Lightbox items — only real images
+const lightboxItems = galleryItems
+  .filter((img) => img.hasImage)
+  .map((img) => ({
+    src: img.src,
+    alt: img.alt,
+    title: img.title,
+    credit: img.credit,
+  }));
+
+// Build a map from gallery index → lightbox index (only for items with images)
+let lbIndex = 0;
+const lightboxIndexMap = galleryItems.map((img) => {
+  if (img.hasImage) {
+    return lbIndex++;
+  }
+  return -1;
+});
 
 const lightboxId = `gallery-lb-${Math.random().toString(36).slice(2, 9)}`;
 ---
 
-<Section spacing="default" background={background} container="wide">
+<Section spacing="compact" background={background} container="wide">
   <div class="image-gallery">
     {/* Header */}
     {
@@ -151,36 +164,51 @@ const lightboxId = `gallery-lb-${Math.random().toString(36).slice(2, 9)}`;
             `image-gallery__grid--col-gap-${colGap}`,
           ]}
         >
-          {galleryItems.map((image, i) => (
-            <div
-              class="image-gallery__item"
-              data-lightbox-target={lightboxId}
-              data-lightbox-index={i}
-              role="button"
-              tabindex="0"
-              aria-label={`View ${image.alt || image.title || "image"}`}
-            >
-              <img
-                src={image.src}
-                srcset={image.srcset}
-                sizes={
-                  columns === 2
-                    ? "(min-width: 768px) 50vw, 100vw"
-                    : columns === 4
-                      ? "(min-width: 1024px) 25vw, (min-width: 768px) 50vw, 100vw"
-                      : columns === 6
-                        ? "(min-width: 1024px) 16.67vw, (min-width: 768px) 33vw, 50vw"
-                        : "(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
-                }
-                alt={image.alt}
-                width={image.width}
-                height={image.height}
-                loading="lazy"
-                decoding="async"
-                class="image-gallery__image"
-              />
-            </div>
-          ))}
+          {galleryItems.map((image, i) => {
+            const colorIndex = (i % 8) + 1;
+            const initial = (image.title || image.alt || "?")
+              .charAt(0)
+              .toUpperCase();
+
+            return image.hasImage ? (
+              <div
+                class="image-gallery__item"
+                data-lightbox-target={lightboxId}
+                data-lightbox-index={lightboxIndexMap[i]}
+                role="button"
+                tabindex="0"
+                aria-label={`View ${image.alt || image.title || "image"}`}
+              >
+                <img
+                  src={image.src}
+                  srcset={image.srcset}
+                  sizes={
+                    columns === 2
+                      ? "(min-width: 768px) 50vw, 100vw"
+                      : columns === 4
+                        ? "(min-width: 1024px) 25vw, (min-width: 768px) 50vw, 100vw"
+                        : columns === 6
+                          ? "(min-width: 1024px) 16.67vw, (min-width: 768px) 33vw, 50vw"
+                          : "(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
+                  }
+                  alt={image.alt}
+                  width={image.width}
+                  height={image.height}
+                  loading="lazy"
+                  decoding="async"
+                  class="image-gallery__image"
+                />
+              </div>
+            ) : (
+              <div
+                class="image-gallery__item image-gallery__placeholder"
+                data-color={colorIndex}
+                aria-label={image.title || "Gallery item"}
+              >
+                <span class="image-gallery__initial">{initial}</span>
+              </div>
+            );
+          })}
         </div>
       )
     }
@@ -194,11 +222,27 @@ const lightboxId = `gallery-lb-${Math.random().toString(36).slice(2, 9)}`;
     display: flex;
     flex-direction: column;
     gap: var(--space-12);
+
+    /* Placeholder colour palette — matches Features */
+    --gallery-color-1: #f97b5e; /* coral */
+    --gallery-color-2: #c4b5e0; /* lavender */
+    --gallery-color-3: #7ec8e3; /* sky */
+    --gallery-color-4: #f5a623; /* amber */
+    --gallery-color-5: #a8d5ba; /* sage */
+    --gallery-color-6: #f2b5c6; /* pink */
+    --gallery-color-7: #f5cf3c; /* gold */
+    --gallery-color-8: #c4ad91; /* tan */
   }
 
   /* Header */
   .image-gallery__header {
-    max-width: 60ch;
+    max-width: 100%;
+  }
+
+  @media (min-width: 768px) {
+    .image-gallery__header {
+      max-width: 50%;
+    }
   }
 
   .image-gallery__heading {
@@ -303,5 +347,50 @@ const lightboxId = `gallery-lb-${Math.random().toString(36).slice(2, 9)}`;
 
   .image-gallery__item:hover .image-gallery__image {
     transform: scale(1.03);
+  }
+
+  /* ============================================================
+     PLACEHOLDER PANELS — coloured fallback when no image
+     ============================================================ */
+  .image-gallery__placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: default;
+  }
+
+  .image-gallery__placeholder[data-color="1"] {
+    background-color: var(--gallery-color-1);
+  }
+  .image-gallery__placeholder[data-color="2"] {
+    background-color: var(--gallery-color-2);
+  }
+  .image-gallery__placeholder[data-color="3"] {
+    background-color: var(--gallery-color-3);
+  }
+  .image-gallery__placeholder[data-color="4"] {
+    background-color: var(--gallery-color-4);
+  }
+  .image-gallery__placeholder[data-color="5"] {
+    background-color: var(--gallery-color-5);
+  }
+  .image-gallery__placeholder[data-color="6"] {
+    background-color: var(--gallery-color-6);
+  }
+  .image-gallery__placeholder[data-color="7"] {
+    background-color: var(--gallery-color-7);
+  }
+  .image-gallery__placeholder[data-color="8"] {
+    background-color: var(--gallery-color-8);
+  }
+
+  .image-gallery__initial {
+    font-family: var(--font-serif);
+    font-size: clamp(3rem, 8vw, 6rem);
+    font-weight: var(--font-bold);
+    line-height: 1;
+    color: var(--color-text-muted);
+    opacity: 0.35;
+    user-select: none;
   }
 </style>
