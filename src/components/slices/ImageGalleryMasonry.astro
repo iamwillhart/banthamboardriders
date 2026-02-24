@@ -70,8 +70,8 @@ const {
 // ============================================================
 // 🔒 DEV-CONTROLLED
 // ============================================================
-const targetRowHeight = 280;
-const gapPx = 4;
+const targetRowHeight = 400; // Step 1
+const gapPx = 8; //Step 2
 
 // Background
 const bgValue = String(background_colour || "main").toLowerCase();
@@ -162,7 +162,7 @@ const lightboxItems = rows.flat().map((img) => ({
 const lightboxId = `masonry-lb-${Math.random().toString(36).slice(2, 9)}`;
 ---
 
-<Section spacing="default" background={background} container="none">
+<Section spacing="compact" background={background} container="wide">
   <div class="masonry-gallery">
     {/* Header */}
     {
@@ -230,8 +230,14 @@ const lightboxId = `masonry-lb-${Math.random().toString(36).slice(2, 9)}`;
 
   /* Header */
   .masonry-gallery__header {
-    max-width: 60ch;
+    max-width: 100%;
     padding-inline: var(--gutter);
+  }
+
+  @media (min-width: 768px) {
+    .masonry-gallery__header {
+      max-width: 50%;
+    }
   }
 
   .masonry-gallery__heading {

@@ -131,7 +131,7 @@ const descriptionText = description || "";
 const placeholderText = placeholder || "Join our mailing list";
 ---
 
-<Section spacing="default" background={background} container="narrow">
+<Section spacing="compact" background={background} container="narrow">
   <div
     class:list={[
       "newsletter",
@@ -241,6 +241,7 @@ const placeholderText = placeholder || "Join our mailing list";
     font-size: var(--text-lg);
     line-height: var(--leading-relaxed);
     max-width: 50ch;
+    margin: 0;
   }
 
   /* Accent bg — softer text */
@@ -257,6 +258,7 @@ const placeholderText = placeholder || "Join our mailing list";
     gap: var(--space-3);
     width: 100%;
     max-width: 500px;
+    margin-bottom: var(--space-4);
   }
 
   .newsletter__input {
