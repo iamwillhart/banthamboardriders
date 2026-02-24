@@ -43,7 +43,6 @@ const routes: Array<{ type: string; path: string }> = [
   // Only add routes for types that exist in YOUR Prismic repo!
   // Prismic validates these — non-existent types will cause errors.
   { type: "page", path: "/:uid" },
-  { type: "document", path: "/documents/:uid" },
   { type: "event", path: "/events/:uid" },
 ];
 

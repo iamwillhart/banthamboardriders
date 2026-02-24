@@ -109,14 +109,12 @@ const bookingUrl = event.data.booking_link
           }
 
           <div class="event-meta">
-            {
-              dateDisplay && (
-                <div class="event-meta__item">
-                  <span class="text-label">Date</span>
-                  <span class="text-body">{dateDisplay}</span>
-                </div>
-              )
-            }
+            <div class="event-meta__item">
+              <span class="text-label">Date</span>
+              <span class="text-body">
+                {dateDisplay || "To be confirmed"}
+              </span>
+            </div>
             {
               timeDisplay && (
                 <div class="event-meta__item">

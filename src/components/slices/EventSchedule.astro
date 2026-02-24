@@ -59,7 +59,10 @@
 import Section from "../Section.astro";
 import { client, linkResolver } from "../../lib/prismic";
 import * as prismic from "@prismicio/client";
-import artworkSvg from "../../assets/shell.svg?raw";
+import shellSvg from "../../assets/shell-slim.svg?raw";
+import conchSvg from "../../assets/conch-slim.svg?raw";
+import starfishSvg from "../../assets/starfish-slim.svg?raw";
+import sunshineSvg from "../../assets/sunshine-slim.svg?raw";
 
 interface Props {
   heading?: string;
@@ -126,10 +129,11 @@ try {
     orderings: [{ field: "my.event.start_date_time", direction: "asc" }],
   });
 
-  // Two-pass filtering:
-  // 1. Build time (here): remove events already past at build — keeps HTML lean
-  // 2. Client side (script below): hides events that passed between build and visit
-  events = allEvents
+  // Split into dated (upcoming) and ongoing (no date) events
+  // Dated events: two-pass filtering —
+  //   1. Build time (here): remove events already past at build — keeps HTML lean
+  //   2. Client side (script below): hides events that passed between build and visit
+  const datedEvents = allEvents
     .filter((e) => {
       if (!e.data.start_date_time) return false;
       return new Date(e.data.start_date_time) >= buildNow;
@@ -150,8 +154,31 @@ try {
         monthLabel: MONTH_NAMES_SHORT[start.getMonth()],
         day: String(start.getDate()).padStart(2, "0"),
         startDate: e.data.start_date_time, // For client-side cleanup pass
+        isOngoing: false,
       };
     });
+
+  // Ongoing events: no date set — always visible, never expire
+  const ongoingEvents = allEvents
+    .filter((e) => !e.data.start_date_time)
+    .map((e) => ({
+      uid: e.uid,
+      url: e.url || `/events/${e.uid}`,
+      title: e.data.title || "Untitled",
+      category: e.data.category || "",
+      location: e.data.location || "",
+      image: e.data.featured_image?.url
+        ? `${e.data.featured_image.url.split("?")[0]}?auto=format&q=75&w=500`
+        : "",
+      imageAlt: e.data.featured_image?.alt || "",
+      monthLabel: "ONGOING",
+      day: "",
+      startDate: "",
+      isOngoing: true,
+    }));
+
+  // Dated events first, then ongoing at the end
+  events = [...datedEvents, ...ongoingEvents];
 } catch (e) {
   if (import.meta.env.DEV) {
     console.warn("EventSchedule: Failed to fetch events.", e);
@@ -209,8 +236,33 @@ const categories = [...new Set(events.map((e) => e.category).filter(Boolean))];
           )
         }
 
-        {/* STEP 1: Replace src/assets/sunshine.svg with your own artwork */}
-        <div class="event-schedule__artwork" set:html={artworkSvg} />
+        {
+          /* STEP 1: Category-aware artwork — shell (default), conch (training),
+    starfish (competition), sunshine (social) */
+        }
+        <div
+          class="event-schedule__artwork"
+          data-artwork="default"
+          set:html={shellSvg}
+        />
+        <div
+          class="event-schedule__artwork"
+          data-artwork="training"
+          style="display:none"
+          set:html={conchSvg}
+        />
+        <div
+          class="event-schedule__artwork"
+          data-artwork="competition"
+          style="display:none"
+          set:html={starfishSvg}
+        />
+        <div
+          class="event-schedule__artwork"
+          data-artwork="social"
+          style="display:none"
+          set:html={sunshineSvg}
+        />
       </div>
 
       {/* ── Columns 2-4: Events ── */}
@@ -220,9 +272,13 @@ const categories = [...new Set(events.map((e) => e.category).filter(Boolean))];
             events.map((e) => (
               <a
                 href={e.url}
-                class="event-schedule__card"
+                class:list={[
+                  "event-schedule__card",
+                  e.isOngoing && "event-schedule__card--ongoing",
+                ]}
                 data-category={e.category}
-                data-start-date={e.startDate}
+                data-start-date={e.startDate || undefined}
+                data-ongoing={e.isOngoing ? "true" : undefined}
               >
                 {/* ── FEATURED IMAGE START ──
                   To remove for lighter carbon footprint,
@@ -242,7 +298,7 @@ const categories = [...new Set(events.map((e) => e.category).filter(Boolean))];
                 {/* ── FEATURED IMAGE END ── */}
 
                 <span class="event-schedule__date">
-                  {e.monthLabel} {e.day}
+                  {e.isOngoing ? e.monthLabel : `${e.monthLabel} ${e.day}`}
                 </span>
                 <span class="event-schedule__title">{e.title}</span>
                 {e.location && (
@@ -283,14 +339,36 @@ const categories = [...new Set(events.map((e) => e.category).filter(Boolean))];
         "[data-events-container]",
       );
 
+      // Artwork swap — map category names to SVG data-artwork values
+      const artworks = schedule.querySelectorAll<HTMLElement>("[data-artwork]");
+      const artworkMap: Record<string, string> = {
+        training: "training",
+        competition: "competition",
+        social: "social",
+      };
+
+      function setArtwork(category: string | undefined) {
+        const key = artworkMap[(category || "").toLowerCase()] || "default";
+        artworks.forEach((el) => {
+          el.style.display =
+            el.getAttribute("data-artwork") === key ? "" : "none";
+        });
+      }
+
       // Filter out past events on page load using browser's current date
+      // Ongoing events (no date) are never hidden by date filtering
       const now = new Date();
       now.setHours(0, 0, 0, 0); // Reset to start of day for comparison
 
       let visibleCount = 0;
       cards.forEach((card) => {
+        const isOngoing = card.getAttribute("data-ongoing") === "true";
         const startDateStr = card.getAttribute("data-start-date");
-        if (startDateStr) {
+
+        if (isOngoing) {
+          // Ongoing events are always visible
+          visibleCount++;
+        } else if (startDateStr) {
           const eventDate = new Date(startDateStr);
           eventDate.setHours(0, 0, 0, 0);
           const isPast = eventDate < now;
@@ -333,15 +411,19 @@ const categories = [...new Set(events.map((e) => e.category).filter(Boolean))];
           filters.forEach((f) => f.classList.remove("is-active"));
           btn.classList.add("is-active");
 
-          // Toggle filtered state (shows images when a category is active)
+          // Swap sidebar artwork to match category
+          setArtwork(isAll ? undefined : chosen);
+
+          // Toggle filtered state
           schedule.classList.toggle("has-filter", !isAll);
 
-          // Show / hide cards (respecting date filter)
+          // Show / hide cards (respecting date filter + ongoing status)
           let filteredCount = 0;
           cards.forEach((card) => {
+            const isOngoing = card.getAttribute("data-ongoing") === "true";
             const startDateStr = card.getAttribute("data-start-date");
             let isPast = false;
-            if (startDateStr) {
+            if (!isOngoing && startDateStr) {
               const eventDate = new Date(startDateStr);
               eventDate.setHours(0, 0, 0, 0);
               isPast = eventDate < now;
@@ -380,7 +462,6 @@ const categories = [...new Set(events.map((e) => e.category).filter(Boolean))];
       });
     });
 </script>
-
 <style>
   /* ============================================================
      CUSTOM PROPERTIES — easy per-project tweaks
@@ -431,13 +512,7 @@ const categories = [...new Set(events.map((e) => e.category).filter(Boolean))];
   }
   @media (min-width: 768px) {
     .event-schedule__layout {
-      grid-template-columns: 1fr 1fr;
-      gap: var(--space-6);
-    }
-  }
-  @media (min-width: 1024px) {
-    .event-schedule__layout {
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: 1fr 4fr;
       gap: var(--space-6);
     }
   }
@@ -476,6 +551,13 @@ const categories = [...new Set(events.map((e) => e.category).filter(Boolean))];
     display: flex;
     flex-direction: column;
     gap: var(--space-1);
+    margin-bottom: var(--space-6);
+  }
+
+  @media (min-width: 1024px) {
+    .event-schedule__filters {
+      margin-bottom: var(--space-60);
+    }
   }
   .event-schedule__filter {
     all: unset;
@@ -530,7 +612,6 @@ const categories = [...new Set(events.map((e) => e.category).filter(Boolean))];
     width: 100%;
     height: auto;
     fill: currentColor;
-    opacity: 0.85;
   }
 
   /* ── CTA button — flows after events on mobile, bottom-right on desktop ── */
@@ -589,7 +670,6 @@ const categories = [...new Set(events.map((e) => e.category).filter(Boolean))];
   .event-schedule__date {
     font-family: var(--font-serif);
     font-size: var(--event-text);
-    font-weight: var(--font-bold);
     font-style: italic;
     text-transform: uppercase;
     margin-bottom: 0.25rem;
@@ -598,6 +678,7 @@ const categories = [...new Set(events.map((e) => e.category).filter(Boolean))];
     font-family: var(--font-serif);
     font-size: var(--event-text);
     text-transform: uppercase;
+    font-weight: var(--font-bold);
     line-height: var(--leading-snug);
   }
   .event-schedule__location {
@@ -610,12 +691,22 @@ const categories = [...new Set(events.map((e) => e.category).filter(Boolean))];
   }
 
   /* ============================================================
+     ONGOING CARD — subtle distinction for undated events
+     ============================================================ */
+  .event-schedule__card--ongoing .event-schedule__date {
+    font-style: normal;
+    font-size: var(--text-sm);
+    letter-spacing: var(--tracking-wider);
+    opacity: 0.7;
+  }
+
+  /* ============================================================
      FEATURED IMAGE — hidden by default, shown when filtering
      To remove entirely for lighter carbon: delete this block
      and the FEATURED IMAGE HTML block above.
      ============================================================ */
   .event-schedule__card-image {
-    display: none;
+    display: none; /* Step 5 - block will show the images none will hide on main screen */
     overflow: hidden;
     margin-bottom: var(--space-2);
   }
@@ -625,7 +716,7 @@ const categories = [...new Set(events.map((e) => e.category).filter(Boolean))];
     object-fit: cover;
     aspect-ratio: 4 / 5;
   }
-  /* When a category filter is active, reveal images */
+  /* When a category filter is active, reveal images  */
   .event-schedule.has-filter .event-schedule__card-image {
     display: block;
   }

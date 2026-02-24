@@ -111,6 +111,8 @@
   /* 96px */
   --space-32: 8rem;
   /* 128px */
+  --space-60: 15rem;
+  /* 240px */
 
   /* Layout */
   --container-sm: 640px;

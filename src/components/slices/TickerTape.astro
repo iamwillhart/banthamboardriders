@@ -86,9 +86,10 @@ if (manualItems.length > 0) {
     const allEvents = await client.getAllByType("event", {
       orderings: [{ field: "my.event.start_date_time", direction: "asc" }],
     });
+    // Include upcoming dated events + ongoing (undated) events
     tickerItems = allEvents
       .filter((e) => {
-        if (!e.data.start_date_time) return false;
+        if (!e.data.start_date_time) return true; // Ongoing — always include
         return new Date(e.data.start_date_time) >= now;
       })
       .slice(0, 8)
