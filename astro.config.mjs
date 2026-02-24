@@ -2,8 +2,14 @@
 import { defineConfig } from 'astro/config';
 import markdoc from '@astrojs/markdoc';
 
+import cloudflare from '@astrojs/cloudflare';
+
 // https://astro.build/config
 export default defineConfig({
   integrations: [markdoc()],
-  output: 'static', // Pure static - maximum sustainability
+
+  // Pure static - maximum sustainability
+  output: 'static',
+
+  adapter: cloudflare()
 });

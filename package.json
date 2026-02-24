@@ -5,14 +5,20 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
-    "preview": "astro preview",
-    "astro": "astro"
+    "preview": "npm run build && wrangler dev",
+    "astro": "astro",
+    "deploy": "npm run build && wrangler deploy",
+    "cf-typegen": "wrangler types"
   },
   "dependencies": {
+    "@astrojs/cloudflare": "^12.6.12",
     "@astrojs/markdoc": "^0.15.10",
     "@fontsource/syne": "^5.2.7",
     "@prismicio/client": "^7.21.2",
     "astro": "^5.16.15",
     "gsap": "^3.14.1"
+  },
+  "devDependencies": {
+    "wrangler": "^4.68.0"
   }
 }

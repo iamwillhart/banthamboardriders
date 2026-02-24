@@ -25,3 +25,9 @@ pnpm-debug.log*
 
 # PHP Mailer Bridge
 public/api/vendor/
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+!.env.example
