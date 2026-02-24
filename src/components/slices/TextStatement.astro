@@ -86,7 +86,7 @@ const buttonUrl = getUrl(button_link);
 const buttonVariant = background === "accent" ? "secondary" : "primary";
 ---
 
-<Section spacing={spacing} background={background} container="default">
+<Section spacing="compact" background={background} container="default">
   <div class="text-statement">
     {
       htmlContent ? (
@@ -130,7 +130,7 @@ const buttonVariant = background === "accent" ? "secondary" : "primary";
      TYPOGRAPHY — adjust per project (Step 3)
      ============================================================ */
   .text-statement__content :global(p) {
-    font-size: clamp(var(--text-2xl), 3vw, var(--text-3xl));
+    font-size: clamp(var(--text-xl), 3vw, var(--text-2xl));
     line-height: var(--leading-snug);
     font-weight: var(--font-regular);
   }
@@ -182,9 +182,12 @@ const buttonVariant = background === "accent" ? "secondary" : "primary";
   }
 
   /* ============================================================
-     BUTTON — appears below the statement text
+     BUTTON — appears below the statement text, aligned right
      ============================================================ */
   .text-statement__action {
     margin-top: var(--space-8);
+    display: flex;
+    justify-content: flex-end;
+    width: 100%;
   }
 </style>
