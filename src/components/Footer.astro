@@ -1,6 +1,9 @@
 ---
 import { getSettings } from "../lib/prismic";
 import * as prismic from "@prismicio/client";
+import InstagramIcon from "../assets/icons/instagram.svg";
+import LinkedInIcon from "../assets/icons/linkedin.svg";
+import FacebookIcon from "../assets/icons/facebook.svg";
 
 interface Props {
   class?: string;
@@ -90,6 +93,13 @@ const hasSocial = linkedinUrl || instagramUrl || facebookUrl;
 
     <div class="footer__column footer__column--follow">
       {
+        contactEmail && (
+          <a href={`mailto:${contactEmail}`} class="footer__email">
+            {contactEmail}
+          </a>
+        )
+      }
+      {
         hasSocial && (
           <>
             {linkedinUrl && (
@@ -99,7 +109,7 @@ const hasSocial = linkedinUrl || instagramUrl || facebookUrl;
                 rel="noopener noreferrer"
                 class="footer__social-link"
               >
-                LinkedIn
+                <LinkedInIcon />
               </a>
             )}
             {instagramUrl && (
@@ -109,7 +119,7 @@ const hasSocial = linkedinUrl || instagramUrl || facebookUrl;
                 rel="noopener noreferrer"
                 class="footer__social-link"
               >
-                Instagram
+                <InstagramIcon />
               </a>
             )}
             {facebookUrl && (
@@ -119,17 +129,10 @@ const hasSocial = linkedinUrl || instagramUrl || facebookUrl;
                 rel="noopener noreferrer"
                 class="footer__social-link"
               >
-                Facebook
+                <FacebookIcon />
               </a>
             )}
           </>
-        )
-      }
-      {
-        contactEmail && (
-          <a href={`mailto:${contactEmail}`} class="footer__email">
-            {contactEmail}
-          </a>
         )
       }
     </div>
@@ -189,7 +192,7 @@ const hasSocial = linkedinUrl || instagramUrl || facebookUrl;
 
   .footer__description {
     font-family: var(--font-serif);
-    font-size: var(--text-sm);
+    font-size: var(--text-md);
     line-height: var(--leading-relaxed);
     color: var(--color-text);
     margin: 0;
@@ -198,7 +201,7 @@ const hasSocial = linkedinUrl || instagramUrl || facebookUrl;
 
   .footer__heading {
     font-family: var(--font-serif);
-    font-size: var(--text-sm);
+    font-size: var(--text-md);
     font-weight: var(--font-bold);
     color: var(--color-text);
     margin: 0 0 var(--space-4) 0;
@@ -206,7 +209,7 @@ const hasSocial = linkedinUrl || instagramUrl || facebookUrl;
 
   .footer__email {
     font-family: var(--font-serif);
-    font-size: var(--text-sm);
+    font-size: var(--text-md);
     color: var(--color-text);
     margin-bottom: var(--space-4);
     transition: opacity var(--transition-fast);
@@ -218,7 +221,7 @@ const hasSocial = linkedinUrl || instagramUrl || facebookUrl;
 
   .footer__address {
     font-family: var(--font-serif);
-    font-size: var(--text-sm);
+    font-size: var(--text-md);
     font-style: normal;
     line-height: var(--leading-relaxed);
     color: var(--color-text);
@@ -238,7 +241,7 @@ const hasSocial = linkedinUrl || instagramUrl || facebookUrl;
 
   .footer__policy-link {
     font-family: var(--font-serif);
-    font-size: var(--text-sm);
+    font-size: var(--text-md);
     font-weight: var(--font-bold);
     color: var(--color-text);
     transition: opacity var(--transition-fast);
@@ -249,10 +252,8 @@ const hasSocial = linkedinUrl || instagramUrl || facebookUrl;
   }
 
   .footer__social-link {
-    font-family: var(--font-serif);
-    font-size: var(--text-sm);
-    color: var(--color-text);
-    transition: opacity var(--transition-fast);
+    width: 24px;
+    height: 24px;
   }
 
   .footer__social-link:hover {
