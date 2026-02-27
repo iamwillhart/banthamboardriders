@@ -677,6 +677,20 @@ const calendarData = JSON.stringify({
     border-color: var(--color-text);
   }
 
+  @media (max-width: 480px) {
+    .event-calendar__grid {
+      gap: var(--space-1);
+    }
+
+    .event-calendar__day {
+      /* let the grid track control the width, but don't let it get too tiny */
+      width: auto;
+      height: auto;
+      min-width: 2.25rem; /* adjust up/down to taste */
+      font-size: var(--text-xs);
+    }
+  }
+
   /* ============================================================
        CATEGORY COLORS — map category to --cat-color
        Training → palette-color-4 (amber)
