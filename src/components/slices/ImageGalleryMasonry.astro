@@ -297,8 +297,22 @@ const lightboxId = `masonry-lb-${Math.random().toString(36).slice(2, 9)}`;
       flex-direction: column;
     }
 
+    /* Hide all items by default on mobile */
     .masonry-gallery__item {
       flex: none !important;
+      display: none;
+    }
+
+    /* Re-show only the first 8 items (indexes 0–7) */
+    .masonry-gallery__item[data-lightbox-index="0"],
+    .masonry-gallery__item[data-lightbox-index="1"],
+    .masonry-gallery__item[data-lightbox-index="2"],
+    .masonry-gallery__item[data-lightbox-index="3"],
+    .masonry-gallery__item[data-lightbox-index="4"],
+    .masonry-gallery__item[data-lightbox-index="5"],
+    .masonry-gallery__item[data-lightbox-index="6"],
+    .masonry-gallery__item[data-lightbox-index="7"] {
+      display: block;
     }
   }
 </style>
