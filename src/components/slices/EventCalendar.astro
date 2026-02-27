@@ -105,6 +105,7 @@ const eventsData = allEvents
         : "",
       imageAlt: e.data.featured_image?.alt || "",
       category: e.data.category || "",
+      categoryKey: (e.data.category || "").toLowerCase().replace(/\s+/g, ""),
       location: e.data.location || "",
       url: e.url || `/events/${e.uid}`,
       year: start.getFullYear(),
@@ -116,6 +117,25 @@ const eventsData = allEvents
       }),
     };
   });
+
+// ============================================================
+// Determine initial month — first month with a future event
+// ============================================================
+const todayStart = new Date(buildYear, buildMonth, now.getDate());
+todayStart.setHours(0, 0, 0, 0);
+
+const futureEvents = eventsData.filter((e) => {
+  const d = new Date(e.year, e.month, e.day);
+  d.setHours(0, 0, 0, 0);
+  return d >= todayStart;
+});
+
+let initialYear = buildYear;
+let initialMonth = buildMonth;
+if (futureEvents.length > 0) {
+  initialYear = futureEvents[0].year;
+  initialMonth = futureEvents[0].month;
+}
 
 // Month range: current → min(furthest event, 12 months ahead)
 const maxAheadDate = new Date(buildYear, buildMonth + 12, 1);
@@ -130,22 +150,32 @@ const furthestEvent =
 const endBound = furthestEvent < maxAheadDate ? furthestEvent : maxAheadDate;
 
 // ============================================================
-// Initial server render (current month)
+// Initial server render (first event month)
 // ============================================================
-const initialEvents = eventsData.filter(
-  (e) => e.year === buildYear && e.month === buildMonth,
-);
-const eventDays = new Set(initialEvents.map((e) => e.day));
-const firstDayOfMonth = new Date(buildYear, buildMonth, 1);
-const daysInMonth = new Date(buildYear, buildMonth + 1, 0).getDate();
-const startOffset = (firstDayOfMonth.getDay() + 6) % 7; // Monday = 0
-const todayDate = now.getDate();
+const initialMonthEvents = eventsData.filter((e) => {
+  const d = new Date(e.year, e.month, e.day);
+  d.setHours(0, 0, 0, 0);
+  return d >= todayStart && e.year === initialYear && e.month === initialMonth;
+});
 
-// JSON for client-side JS
+const eventDays = new Set(initialMonthEvents.map((e) => e.day));
+const eventDayCategories = new Map<number, string>();
+initialMonthEvents.forEach((e) => {
+  if (!eventDayCategories.has(e.day)) {
+    eventDayCategories.set(e.day, e.categoryKey);
+  }
+});
+
+const firstDayOfMonth = new Date(initialYear, initialMonth, 1);
+const daysInMonth = new Date(initialYear, initialMonth + 1, 0).getDate();
+const startOffset = (firstDayOfMonth.getDay() + 6) % 7;
+const todayDate =
+  initialYear === buildYear && initialMonth === buildMonth ? now.getDate() : -1;
+
 const calendarData = JSON.stringify({
   events: eventsData,
-  initialYear: buildYear,
-  initialMonth: buildMonth,
+  initialYear,
+  initialMonth,
   minYear: buildYear,
   minMonth: buildMonth,
   maxYear: endBound.getFullYear(),
@@ -178,13 +208,13 @@ const calendarData = JSON.stringify({
             type="button"
             data-calendar-prev
             aria-label="Previous month"
-            disabled
+            disabled={initialYear === buildYear && initialMonth === buildMonth}
           >
             ‹
           </button>
           <span class="event-calendar__month-label" data-calendar-month>
-            {MONTH_NAMES[buildMonth]}
-            {buildYear}
+            {MONTH_NAMES[initialMonth]}
+            {initialYear}
           </span>
           <button type="button" data-calendar-next aria-label="Next month">
             ›
@@ -206,6 +236,7 @@ const calendarData = JSON.stringify({
             Array.from({ length: daysInMonth }, (_, i) => i + 1).map((d) => {
               const isToday = d === todayDate;
               const hasEvent = eventDays.has(d);
+              const category = eventDayCategories.get(d);
               return (
                 <button
                   type="button"
@@ -216,6 +247,7 @@ const calendarData = JSON.stringify({
                   ]}
                   disabled={!hasEvent}
                   data-day={hasEvent ? String(d) : undefined}
+                  data-category={hasEvent && category ? category : undefined}
                 >
                   {d}
                 </button>
@@ -228,12 +260,12 @@ const calendarData = JSON.stringify({
       {/* Right: Events panel */}
       <div class="event-calendar__panel" data-calendar-events>
         <h3 class="event-calendar__panel-title" data-calendar-panel-title>
-          {MONTH_NAMES[buildMonth]} Events
+          {MONTH_NAMES[initialMonth]} Events
         </h3>
         <div data-calendar-event-content>
           {
-            initialEvents.length > 0 ? (
-              initialEvents.map((e) => (
+            initialMonthEvents.length > 0 ? (
+              initialMonthEvents.map((e) => (
                 <a href={e.url} class="event-calendar__event-row">
                   <span class="event-calendar__event-date">
                     {ordinal(e.day)} {MONTH_NAMES[e.month]}
@@ -288,12 +320,10 @@ const calendarData = JSON.stringify({
     }
 
     var now = new Date();
-    // Use browser's current date instead of build date
-    var vY = now.getFullYear();
-    var vM = now.getMonth();
+    var vY = data.initialYear;
+    var vM = data.initialMonth;
 
     function clamp() {
-      // Ensure we don't go before the minimum (build month) or after max
       if (vY < data.minYear || (vY === data.minYear && vM < data.minMonth)) {
         vY = data.minYear;
         vM = data.minMonth;
@@ -320,9 +350,12 @@ const calendarData = JSON.stringify({
       var days = new Date(y, m + 1, 0).getDate();
       var off = (first + 6) % 7;
       var evts = eventsFor(y, m);
+
       var eDays = {};
+      var eCats = {};
       evts.forEach(function (e) {
         eDays[e.day] = true;
+        if (!eCats[e.day]) eCats[e.day] = e.categoryKey || "";
       });
 
       var h = DH.map(function (d) {
@@ -342,14 +375,27 @@ const calendarData = JSON.stringify({
         var cls = "event-calendar__day";
         if (isT) cls += " event-calendar__day--today";
         if (hasE) cls += " event-calendar__day--event";
-        h +=
-          '<button type="button" class="' +
-          cls +
-          '"' +
-          (hasE ? ' data-day="' + d + '"' : " disabled") +
-          ">" +
-          d +
-          "</button>";
+
+        if (hasE) {
+          var cat = eCats[d] || "";
+          h +=
+            '<button type="button" class="' +
+            cls +
+            '" data-day="' +
+            d +
+            '"' +
+            (cat ? ' data-category="' + cat + '"' : "") +
+            ">" +
+            d +
+            "</button>";
+        } else {
+          h +=
+            '<button type="button" class="' +
+            cls +
+            '" disabled>' +
+            d +
+            "</button>";
+        }
       }
 
       grid.innerHTML = h;
@@ -370,7 +416,14 @@ const calendarData = JSON.stringify({
         });
       });
 
-      showList(evts, m);
+      if (evts.length === 1) {
+        var dayBtn = grid.querySelector('[data-day="' + evts[0].day + '"]');
+        if (dayBtn) dayBtn.classList.add("event-calendar__day--active");
+        showDetail(evts, m, y);
+      } else {
+        showList(evts, m);
+      }
+
       updateNav();
     }
 
@@ -526,7 +579,7 @@ const calendarData = JSON.stringify({
   }
   @media (min-width: 768px) {
     .event-calendar__body {
-      grid-template-columns: 5fr 4fr;
+      grid-template-columns: 1fr 1fr;
       gap: 0;
     }
   }
@@ -624,31 +677,51 @@ const calendarData = JSON.stringify({
     border-color: var(--color-text);
   }
 
-  /* Event day: accent circle outline */
+  /* ============================================================
+       CATEGORY COLORS — map category to --cat-color
+       Training → palette-color-4 (amber)
+       Social → palette-color-1 (coral)
+       Competition → palette-color-3 (sky)
+       Adventure → palette-color-2 (lavender)
+       ============================================================ */
+  .event-calendar__day--event[data-category="training"] {
+    --cat-color: var(--palette-color-4);
+  }
+  .event-calendar__day--event[data-category="social"] {
+    --cat-color: var(--palette-color-1);
+  }
+  .event-calendar__day--event[data-category="competition"] {
+    --cat-color: var(--palette-color-2);
+  }
+  .event-calendar__day--event[data-category="adventure"] {
+    --cat-color: var(--palette-color-3);
+  }
+
+  /* Event day: category-colored circle outline */
   .event-calendar__day--event {
-    border: 2px solid var(--color-accent);
+    border: 2px solid var(--cat-color, var(--color-accent));
     color: var(--color-text);
     cursor: pointer;
     font-weight: var(--font-medium);
   }
   .event-calendar__day--event:hover {
-    background: var(--color-accent);
+    background: var(--cat-color, var(--color-accent));
     color: var(--color-bg);
-    border-color: var(--color-accent);
+    border-color: var(--cat-color, var(--color-accent));
   }
 
-  /* Today + event: accent filled */
+  /* Today + event: category-colored filled */
   .event-calendar__day--today.event-calendar__day--event {
-    background: var(--color-accent);
+    background: var(--cat-color, var(--color-accent));
     color: var(--color-bg);
-    border-color: var(--color-accent);
+    border-color: var(--cat-color, var(--color-accent));
   }
 
   /* Active (clicked) day */
   .event-calendar__day--active {
-    background: var(--color-accent) !important;
+    background: var(--cat-color, var(--color-accent)) !important;
     color: var(--color-bg) !important;
-    border-color: var(--color-accent) !important;
+    border-color: var(--cat-color, var(--color-accent)) !important;
   }
 
   /* ============================================================
@@ -731,12 +804,32 @@ const calendarData = JSON.stringify({
     color: inherit;
     margin-bottom: var(--space-8);
   }
+  @media (min-width: 768px) {
+    .event-calendar__detail-card {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 1fr auto;
+      gap: 0 var(--space-6);
+    }
+    .event-calendar__detail-image {
+      grid-row: 1 / -1;
+      margin-bottom: 0;
+    }
+    .event-calendar__detail-info {
+      grid-column: 2;
+    }
+    .event-calendar__detail-cta {
+      grid-column: 2;
+      align-self: end;
+    }
+  }
+
   .event-calendar__detail-card:hover .event-calendar__detail-image {
     opacity: 0.9;
   }
   .event-calendar__detail-image {
     width: 100%;
-    aspect-ratio: 3 / 2;
+    aspect-ratio: 4 / 5;
     object-fit: cover;
     margin-bottom: var(--space-4);
     transition: opacity var(--transition-fast);
