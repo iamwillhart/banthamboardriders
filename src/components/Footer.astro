@@ -149,6 +149,8 @@ const hasSocial = linkedinUrl || instagramUrl || facebookUrl;
     display: grid;
     grid-template-columns: 1fr;
     gap: var(--space-8);
+    justify-items: center;
+    text-align: center;
   }
 
   @media (min-width: 768px) {
@@ -162,6 +164,20 @@ const hasSocial = linkedinUrl || instagramUrl || facebookUrl;
     display: flex;
     flex-direction: column;
     align-self: center;
+    align-items: center;
+  }
+
+  @media (min-width: 768px) {
+    .footer__inner {
+      grid-template-columns: 3fr 2fr 2fr;
+      gap: var(--space-8);
+      justify-items: flex-start; /* override if you prefer left-aligned on desktop */
+      text-align: left; /* override if needed */
+    }
+
+    .footer__column {
+      align-items: flex-start; /* override if needed */
+    }
   }
 
   .footer__brand {
