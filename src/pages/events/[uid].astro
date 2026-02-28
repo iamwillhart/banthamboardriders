@@ -5,11 +5,14 @@
  * Displays a single Prismic "event" document.
  * Shows event header with date/time, location, category,
  * booking link, then the slice zone body.
+ *
+ * Hero uses a split layout: text left, featured image (4:5) right.
  */
 import Layout from "../../layouts/Layout.astro";
 import Header from "../../components/Header.astro";
 import Footer from "../../components/Footer.astro";
 import SliceZone from "../../components/SliceZone.astro";
+import Section from "../../components/Section.astro";
 import { client, getSettings } from "../../lib/prismic";
 import * as prismic from "@prismicio/client";
 import { linkResolver } from "../../lib/prismic";
@@ -36,66 +39,51 @@ const image =
   event.data.meta_image?.url || settings?.data?.default_og_image?.url || "";
 
 // ============================================================
-// Date formatting helpers
+// Date formatting
 // ============================================================
-const startDate = event.data.start_date_time
-  ? new Date(event.data.start_date_time)
-  : null;
-const endDate = event.data.end_date_time
-  ? new Date(event.data.end_date_time)
-  : null;
+const eventDate = event.data.date ? new Date(event.data.date) : null;
 
-function formatDate(date: Date): string {
-  return date.toLocaleDateString("en-GB", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-}
-
-function formatTime(date: Date): string {
-  return date.toLocaleTimeString("en-GB", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-// Build display strings
-let dateDisplay = "";
-let timeDisplay = "";
-
-if (startDate) {
-  const startDay = startDate.toDateString();
-  const endDay = endDate ? endDate.toDateString() : null;
-
-  if (endDate && endDay !== startDay) {
-    // Multi-day event
-    dateDisplay = `${formatDate(startDate)} – ${formatDate(endDate)}`;
-    timeDisplay = `${formatTime(startDate)} – ${formatTime(endDate)}`;
-  } else {
-    // Single day event
-    dateDisplay = formatDate(startDate);
-    timeDisplay = formatTime(startDate);
-    if (endDate) {
-      timeDisplay = `${formatTime(startDate)} – ${formatTime(endDate)}`;
-    }
-  }
-}
+const dateDisplay = eventDate
+  ? eventDate.toLocaleDateString("en-GB", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    })
+  : "";
 
 // Booking link
 const bookingUrl = event.data.booking_link
   ? prismic.asLink(event.data.booking_link, { linkResolver })
   : null;
+
+const hasFeaturedImage = !!event.data.featured_image?.url;
+
+// Determine the last slice's background color
+const lastSlice = slices.length > 0 ? slices[slices.length - 1] : null;
+const lastSliceBgRaw = String(
+  lastSlice?.primary?.background_colour || "main",
+).toLowerCase();
+const lastSliceBg =
+  lastSliceBgRaw === "secondary"
+    ? "alt"
+    : lastSliceBgRaw === "accent"
+      ? "accent"
+      : "default";
 ---
 
 <Layout title={title} description={description} image={image}>
   <Header variant="solid" scrollBehavior="none" />
   <main>
-    {/* Event header — always shown */}
-    <section class="section section--hero">
-      <div class="container">
-        <div class="event-header">
+    {/* Event hero — split layout when image present */}
+    <Section
+      spacing="hero"
+      container="none"
+      class={`event-hero${hasFeaturedImage ? " event-hero--has-image" : ""}`}
+    >
+      <div class="event-hero__inner">
+        {/* Text column */}
+        <div class="event-hero__content">
           {
             event.data.category && (
               <span class="event-header__category">{event.data.category}</span>
@@ -109,22 +97,12 @@ const bookingUrl = event.data.booking_link
           }
 
           <div class="event-meta">
-            {
-              dateDisplay && (
-                <div class="event-meta__item">
-                  <span class="text-label">Date</span>
-                  <span class="text-body">{dateDisplay}</span>
-                </div>
-              )
-            }
-            {
-              timeDisplay && (
-                <div class="event-meta__item">
-                  <span class="text-label">Time</span>
-                  <span class="text-body">{timeDisplay}</span>
-                </div>
-              )
-            }
+            <div class="event-meta__item">
+              <span class="text-label">Date</span>
+              <span class="text-body">
+                {dateDisplay || "To be confirmed"}
+              </span>
+            </div>
             {
               event.data.location && (
                 <div class="event-meta__item">
@@ -150,43 +128,97 @@ const bookingUrl = event.data.booking_link
             )
           }
         </div>
-      </div>
-    </section>
 
-    {/* Featured image */}
-    {
-      event.data.featured_image?.url && (
-        <section class="section section--compact">
-          <div class="container container--wide">
-            <img
-              src={`${event.data.featured_image.url.split("?")[0]}?auto=format&q=80&w=1400`}
-              alt={event.data.featured_image.alt || ""}
-              width={event.data.featured_image.dimensions?.width}
-              height={event.data.featured_image.dimensions?.height}
-              class="event-hero-image"
-              loading="eager"
-              decoding="async"
-            />
-          </div>
-        </section>
-      )
-    }
+        {/* Image column */}
+        {
+          hasFeaturedImage && (
+            <div class="event-hero__image-col">
+              <img
+                src={`${event.data.featured_image.url.split("?")[0]}?auto=format&q=80&w=800`}
+                alt={event.data.featured_image.alt || ""}
+                width={event.data.featured_image.dimensions?.width}
+                height={event.data.featured_image.dimensions?.height}
+                class="event-hero__image"
+                loading="eager"
+                decoding="async"
+              />
+            </div>
+          )
+        }
+      </div>
+    </Section>
 
     <SliceZone slices={slices} />
 
-    {/* Back link */}
-    <section class="section section--compact">
-      <div class="container">
+    {/* Back link — inherits last slice's background */}
+    <Section spacing="compact" background={lastSliceBg} container="wide">
+      <div style="text-align: center;">
         <a href="/events" class="back-link text-label">← All Events</a>
       </div>
-    </section>
+    </Section>
   </main>
   <Footer />
 </Layout>
 
 <style>
-  .event-header {
+  /* ============================================================
+     Hero section — custom inline padding for edge-bleed image
+     :global() needed because .event-hero is on the Section wrapper,
+     which is rendered in Section.astro's template, not this page's.
+     ============================================================ */
+  :global(.event-hero) {
+    padding-inline: var(--gutter);
+    margin-top: var(--header-height, 96px);
+    padding-block: var(--space-6);
+  }
+
+  @media (min-width: 768px) {
+    :global(.event-hero) {
+      padding-inline: var(--gutter-lg) 0;
+      padding-block: 0;
+    }
+  }
+
+  /* ============================================================
+     Inner grid — stacks on mobile, side-by-side on desktop
+     :global() on the parent since it's the Section wrapper
+     ============================================================ */
+  .event-hero__inner {
+    margin-inline: auto;
+  }
+
+  @media (min-width: 768px) {
+    :global(.event-hero--has-image) .event-hero__inner {
+      display: grid;
+      grid-template-columns: 7fr 6fr;
+      gap: var(--space-12);
+      align-items: center;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    :global(.event-hero--has-image) .event-hero__inner {
+      gap: var(--space-16);
+    }
+  }
+
+  /* ============================================================
+     Text column
+     ============================================================ */
+  .event-hero__content {
     max-width: var(--container-md);
+  }
+
+  @media (min-width: 768px) {
+    :global(.event-hero--has-image) .event-hero__content {
+      max-width: none;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .event-hero__content {
+      margin-top: 0;
+    }
   }
 
   .event-header__category {
@@ -200,11 +232,15 @@ const bookingUrl = event.data.booking_link
     margin-bottom: var(--space-2);
   }
 
-  .event-header .heading-1 {
+  .heading-1 {
+    font-weight: var(--font-bold);
+  }
+
+  .event-hero__content .heading-1 {
     margin-top: var(--space-2);
   }
 
-  .event-header .text-body-lg {
+  .event-hero__content .text-body-lg {
     margin-top: var(--space-4);
   }
 
@@ -227,15 +263,36 @@ const bookingUrl = event.data.booking_link
     margin-top: var(--space-8);
   }
 
-  .event-hero-image {
-    width: 100%;
-    height: auto;
-    display: block;
+  /* ============================================================
+     Image column
+     ============================================================ */
+  .event-hero__image-col {
+    margin-top: var(--space-10);
   }
 
+  @media (min-width: 768px) {
+    .event-hero__image-col {
+      margin-top: 0;
+    }
+  }
+
+  .event-hero__image {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 4 / 5;
+    object-fit: cover;
+    display: block;
+    border-radius: none;
+  }
+
+  /* ============================================================
+     Back link
+     ============================================================ */
   .back-link {
     display: inline-block;
     transition: opacity var(--transition-fast);
+    margin-bottom: var(--space-20);
+    margin-right: var(--space-12);
   }
 
   .back-link:hover {

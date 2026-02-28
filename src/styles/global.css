@@ -32,6 +32,17 @@
   --color-text-muted: rgba(26, 26, 26, 0.8);
   --color-text-subtle: rgba(26, 26, 26, 0.4);
   --color-accent: #8d858d;
+
+  /* Full Colour Palette */
+--palette-color-1: #f97b5e; /* coral */
+--palette-color-2: #c4b5e0; /* lavender */
+--palette-color-3: #7ec8e3; /* sky */
+--palette-color-4: #f5a623; /* amber */
+--palette-color-5: #a8d5ba; /* sage */
+--palette-color-6: #f2b5c6; /* pink */
+--palette-color-7: #f5cf3c; /* gold */
+--palette-color-8: #c4ad91; /* tan */
+
   /* Buttons, links, highlights */
 
   /* Typography - Scale (Major Third - 1.25) */
@@ -111,6 +122,8 @@
   /* 96px */
   --space-32: 8rem;
   /* 128px */
+  --space-60: 15rem;
+  /* 240px */
 
   /* Layout */
   --container-sm: 640px;
@@ -126,6 +139,11 @@
      ========================= */
   --gutter: var(--space-4);
   --gutter-lg: var(--space-6);
+
+  /* Header height (padding-block + inner height + padding-block)
+     Mobile: 16 + 64 + 16 = 96px
+     Desktop (≥1024): 16 + 80 + 16 = 112px */
+  --header-height: 96px;
 
   /* =========================
      📐 RADIUS — CHANGE FOR AESTHETIC
@@ -153,6 +171,12 @@
   --z-overlay: 300;
   --z-modal: 400;
   --z-toast: 500;
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --header-height: 112px;
+  }
 }
 
 

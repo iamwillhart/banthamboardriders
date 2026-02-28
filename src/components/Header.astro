@@ -110,8 +110,7 @@ const headerLogo = settings?.data?.header_logo;
 // Navigation items - update these for each project
 const navItems = [
   { label: "About", href: "/about" },
-  { label: "Events", href: "/events" },
-  { label: "Training", href: "/training" },
+  { label: "Events & Training", href: "/events" },
   { label: "Memberships", href: "/memberships" },
   { label: "Documents", href: "/documents" },
   { label: "Contact", href: "/contact" },
@@ -205,7 +204,7 @@ const currentPath = Astro.url.pathname;
     </nav>
 
     <div class="mobile-panel__footer" data-mobile-footer>
-      <p>hello@yoursite.com</p>
+      <p>hello@banthamboardriders.uk</p>
     </div>
   </div>
 </div>
@@ -393,7 +392,7 @@ const currentPath = Astro.url.pathname;
     top: 0;
     left: 0;
     right: 0;
-    z-index: var(--z-sticky);
+    z-index: calc(var(--z-modal) + 10);
     transition:
       background-color var(--transition-base),
       box-shadow var(--transition-base),
@@ -738,7 +737,7 @@ const currentPath = Astro.url.pathname;
     right: 0;
     bottom: 0;
     width: 100%;
-    max-width: 400px;
+    /* max-width: 400px; */
     background-color: var(--color-bg-alt);
     transform: translateX(100%);
     transition: transform 500ms cubic-bezier(0.16, 1, 0.3, 1);

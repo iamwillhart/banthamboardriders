@@ -57,7 +57,6 @@ const {
   button_label,
   button_link,
   background_colour = "main",
-  spacing = "default",
 } = Astro.props;
 
 // Helper to extract URL from Prismic link field
@@ -115,16 +114,9 @@ const buttonVariant = background === "accent" ? "secondary" : "primary";
      ============================================================ */
   .text-statement__content,
   .text-statement__action {
-    max-width: var(--container-lg); /* Step 1: Wider for statement text */
-    margin-inline: 0 auto; /* Step 2: Positioning */
+    max-width: 80ch;
+    margin-inline: 0;
   }
-
-  /* @media (min-width: 768px) {
-    .text-statement__content,
-    .text-statement__action {
-      max-width: 90ch;
-    }
-  } */
 
   /* ============================================================
      TYPOGRAPHY — adjust per project (Step 3)
@@ -132,33 +124,63 @@ const buttonVariant = background === "accent" ? "secondary" : "primary";
   .text-statement__content :global(p) {
     font-size: clamp(var(--text-xl), 3vw, var(--text-2xl));
     line-height: var(--leading-snug);
-    font-weight: var(--font-regular);
   }
 
   .text-statement__content :global(p + p) {
     margin-top: var(--space-6);
   }
 
-  /* Headings within statement (rare, but supported) */
-  .text-statement__content :global(h2),
-  .text-statement__content :global(h3),
-  .text-statement__content :global(h4) {
-    font-family: var(--font-serif);
-    font-weight: var(--font-regular);
+  /* Headings — bold & uppercase already from global reset,
+     just need sizes and spacing */
+  .text-statement__content :global(h2) {
+    font-size: clamp(var(--text-3xl), 4vw, var(--text-4xl));
+    margin-top: var(--space-12);
     margin-bottom: var(--space-4);
   }
 
-  .text-statement__content :global(h2) {
-    font-size: var(--text-3xl);
-  }
-
   .text-statement__content :global(h3) {
-    font-size: var(--text-2xl);
+    font-size: clamp(var(--text-2xl), 3vw, var(--text-3xl));
+    margin-top: var(--space-10);
+    margin-bottom: var(--space-4);
   }
 
-  /* Remove top margin from first child (prevents double-padding at section start) */
+  .text-statement__content :global(h4) {
+    font-size: clamp(var(--text-xl), 3vw, var(--text-2xl));
+    margin-top: var(--space-8);
+    margin-bottom: var(--space-3);
+  }
+
+  .text-statement__content :global(h5) {
+    font-size: var(--text-xl);
+    margin-top: var(--space-8);
+    margin-bottom: var(--space-3);
+  }
+
+  .text-statement__content :global(h6) {
+    font-size: var(--text-lg);
+    margin-top: var(--space-6);
+    margin-bottom: var(--space-3);
+  }
+
+  /* Remove top margin from first child */
   .text-statement__content :global(> :first-child) {
     margin-top: 0;
+  }
+
+  /* Lists — global reset strips list-style, restore it here */
+  .text-statement__content :global(ul) {
+    list-style: disc;
+    padding-left: var(--space-6);
+  }
+
+  .text-statement__content :global(ol) {
+    list-style: decimal;
+    padding-left: var(--space-6);
+  }
+
+  .text-statement__content :global(li) {
+    margin-top: var(--space-2);
+    font-size: clamp(var(--text-lg), 3vw, var(--text-xl));
   }
 
   /* Links */
@@ -172,17 +194,8 @@ const buttonVariant = background === "accent" ? "secondary" : "primary";
     opacity: 0.7;
   }
 
-  /* Bold & italic */
-  .text-statement__content :global(strong) {
-    font-weight: var(--font-bold);
-  }
-
-  .text-statement__content :global(em) {
-    font-style: italic;
-  }
-
   /* ============================================================
-     BUTTON — appears below the statement text, aligned right
+     BUTTON — appears below the statement text
      ============================================================ */
   .text-statement__action {
     margin-top: var(--space-8);
