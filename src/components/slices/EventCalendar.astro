@@ -52,7 +52,7 @@ const descriptionHtml =
 let allEvents: any[] = [];
 try {
   allEvents = await client.getAllByType("event", {
-    orderings: [{ field: "my.event.start_date_time", direction: "asc" }],
+    orderings: [{ field: "my.event.date", direction: "asc" }],
   });
 } catch (e) {
   if (import.meta.env.DEV) {
@@ -93,9 +93,9 @@ const buildYear = now.getFullYear();
 const buildMonth = now.getMonth();
 
 const eventsData = allEvents
-  .filter((e) => e.data.start_date_time)
+  .filter((e) => e.data.date)
   .map((e) => {
-    const start = new Date(e.data.start_date_time);
+    const start = new Date(e.data.date);
     return {
       uid: e.uid,
       title: e.data.title || "Untitled",
@@ -111,10 +111,6 @@ const eventsData = allEvents
       year: start.getFullYear(),
       month: start.getMonth(),
       day: start.getDate(),
-      time: start.toLocaleTimeString("en-GB", {
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
     };
   });
 
@@ -485,9 +481,6 @@ const calendarData = JSON.stringify({
             MN[e.month] +
             " " +
             e.year +
-            "</span>" +
-            "<span>" +
-            e.time +
             "</span></div></div><div class='event-calendar__detail-cta'>View Details →</div></a>";
           return h;
         })

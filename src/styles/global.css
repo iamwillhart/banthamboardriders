@@ -140,6 +140,11 @@
   --gutter: var(--space-4);
   --gutter-lg: var(--space-6);
 
+  /* Header height (padding-block + inner height + padding-block)
+     Mobile: 16 + 64 + 16 = 96px
+     Desktop (≥1024): 16 + 80 + 16 = 112px */
+  --header-height: 96px;
+
   /* =========================
      📐 RADIUS — CHANGE FOR AESTHETIC
      Set all to 0 for sharp/brutalist
@@ -166,6 +171,12 @@
   --z-overlay: 300;
   --z-modal: 400;
   --z-toast: 500;
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --header-height: 112px;
+  }
 }
 
 

@@ -39,52 +39,18 @@ const image =
   event.data.meta_image?.url || settings?.data?.default_og_image?.url || "";
 
 // ============================================================
-// Date formatting helpers
+// Date formatting
 // ============================================================
-const startDate = event.data.start_date_time
-  ? new Date(event.data.start_date_time)
-  : null;
-const endDate = event.data.end_date_time
-  ? new Date(event.data.end_date_time)
-  : null;
+const eventDate = event.data.date ? new Date(event.data.date) : null;
 
-function formatDate(date: Date): string {
-  return date.toLocaleDateString("en-GB", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-}
-
-function formatTime(date: Date): string {
-  return date.toLocaleTimeString("en-GB", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-// Build display strings
-let dateDisplay = "";
-let timeDisplay = "";
-
-if (startDate) {
-  const startDay = startDate.toDateString();
-  const endDay = endDate ? endDate.toDateString() : null;
-
-  if (endDate && endDay !== startDay) {
-    // Multi-day event
-    dateDisplay = `${formatDate(startDate)} – ${formatDate(endDate)}`;
-    timeDisplay = `${formatTime(startDate)} – ${formatTime(endDate)}`;
-  } else {
-    // Single day event
-    dateDisplay = formatDate(startDate);
-    timeDisplay = formatTime(startDate);
-    if (endDate) {
-      timeDisplay = `${formatTime(startDate)} – ${formatTime(endDate)}`;
-    }
-  }
-}
+const dateDisplay = eventDate
+  ? eventDate.toLocaleDateString("en-GB", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    })
+  : "";
 
 // Booking link
 const bookingUrl = event.data.booking_link
@@ -137,14 +103,6 @@ const lastSliceBg =
                 {dateDisplay || "To be confirmed"}
               </span>
             </div>
-            {
-              timeDisplay && (
-                <div class="event-meta__item">
-                  <span class="text-label">Time</span>
-                  <span class="text-body">{timeDisplay}</span>
-                </div>
-              )
-            }
             {
               event.data.location && (
                 <div class="event-meta__item">
@@ -210,6 +168,8 @@ const lastSliceBg =
      ============================================================ */
   :global(.event-hero) {
     padding-inline: var(--gutter);
+    margin-top: var(--header-height, 96px);
+    padding-block: var(--space-6);
   }
 
   @media (min-width: 768px) {
@@ -230,7 +190,7 @@ const lastSliceBg =
   @media (min-width: 768px) {
     :global(.event-hero--has-image) .event-hero__inner {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: 7fr 6fr;
       gap: var(--space-12);
       align-items: center;
     }
@@ -247,7 +207,6 @@ const lastSliceBg =
      ============================================================ */
   .event-hero__content {
     max-width: var(--container-md);
-    margin-top: var(--space-10);
   }
 
   @media (min-width: 768px) {
