@@ -512,7 +512,7 @@ const categories = [...new Set(events.map((e) => e.category).filter(Boolean))];
   @media (min-width: 768px) {
     .event-schedule__layout {
       grid-template-columns: 1fr 4fr;
-      gap: var(--space-16);
+      gap: var(--space-20);
     }
   }
 
@@ -533,7 +533,7 @@ const categories = [...new Set(events.map((e) => e.category).filter(Boolean))];
 
   .event-schedule__heading {
     font-family: var(--font-serif);
-    font-size: var(--text-2xl);
+    font-size: var(--text-3xl);
     font-weight: var(--font-bold);
     text-transform: uppercase;
     line-height: var(--leading-snug);
@@ -541,7 +541,7 @@ const categories = [...new Set(events.map((e) => e.category).filter(Boolean))];
   }
   @media (min-width: 1024px) {
     .event-schedule__heading {
-      font-size: var(--text-3xl);
+      font-size: var(--text-4xl);
     }
   }
 

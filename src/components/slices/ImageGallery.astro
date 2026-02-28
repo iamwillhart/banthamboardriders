@@ -247,9 +247,15 @@ const lightboxId = `gallery-lb-${Math.random().toString(36).slice(2, 9)}`;
 
   .image-gallery__heading {
     font-family: var(--font-serif);
-    font-size: var(--text-4xl);
+    font-size: var(--text-3xl);
     line-height: var(--leading-snug);
     margin-bottom: var(--space-4);
+  }
+
+  @media (min-width: 1024px) {
+    .image-gallery__heading {
+      font-size: var(--text-4xl);
+    }
   }
 
   .image-gallery__description {
