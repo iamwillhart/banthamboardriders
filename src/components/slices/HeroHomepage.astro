@@ -2,35 +2,29 @@
 /**
  * HeroHomepage
  *
- * KB RATING: A* (0KB JS — pure CSS)
- * CARBON TIER: A (image-heavy, but single image load)
+ * KB RATING: A (~1KB JS for events toggle + auto-advance)
+ * CARBON TIER: A (event images lazy loaded on demand)
  *
  * Full-viewport hero with background image and text overlay.
- * Perfect for landing pages and dramatic opening statements.
+ * "Upcoming Events" toggle reveals event posters edge-to-edge —
+ * no overlays, no shadows, just the images.
+ *
+ * Desktop: 3 posters at 4:5 = 12:5 hero ratio. Auto-advances if >3.
+ * Mobile: 1 poster at 4:5. Auto-advances if >1.
+ * Repeats posters to always fill 3 desktop columns.
  *
  * ============================================================
  * 🚀 NEW CLIENT SETUP — follow these steps:
  * ============================================================
  *
- * STEP 1: Set position (line ~99)
- *   Change "bottom-left" to your chosen position.
+ * STEP 1: Set position
  *   Options: "bottom-left" | "left" | "center" | "right" | "bottom-right"
  *
- * STEP 2: Set height (line ~100)
- *   Change "large" to your chosen height.
- *   Options: "large" (90vh) | "full" (100vh) | "medium" (70vh)
+ * STEP 2: Set overlay darkness
+ *   Change to your chosen opacity (0-100).
  *
- * STEP 3: Set overlay darkness (line ~102)
- *   Change 40 to your chosen opacity (0-100).
- *   Light images need higher (50-60), dark images need lower (20-30).
- *
- * STEP 4: Set container width (line ~103)
- *   Options: "full" (text aligns with nav) | "contained" (1200px, matches other slices)
- *
- * STEP 5: Update CSS to match (bottom of file)
- *   Only ONE position variant should be active in CSS.
- *   Only ONE height variant should be active in CSS.
- *   Delete or comment out the variants you're not using.
+ * STEP 3: Set container width
+ *   Options: "full" (text aligns with nav) | "contained" (1200px)
  *
  * ============================================================
  * 📝 PRISMIC FIELDS (client controls in CMS)
@@ -42,13 +36,13 @@
  *   - button_label (Key Text) — button text
  *   - button_link (Link) — button destination
  *
+ * Events auto-fetched from Prismic "event" type. No extra fields needed.
  * ============================================================
  */
-import { linkResolver } from "../../lib/prismic";
+import { client, linkResolver } from "../../lib/prismic";
 import * as prismic from "@prismicio/client";
 
 interface Props {
-  // Prismic fields
   heading: string;
   tagline?: string;
   image?: {
@@ -59,7 +53,6 @@ interface Props {
   logo?: { url?: string; alt?: string };
   button_label?: string;
   button_link?: { url?: string } | string;
-  // Developer overrides (for direct Astro use, rare)
   primaryCta?: { label: string; href: string };
   secondaryCta?: { label: string; href: string };
   contentPosition?:
@@ -69,7 +62,6 @@ interface Props {
     | "bottom-left"
     | "bottom-right";
   overlayOpacity?: number;
-  minHeight?: "full" | "large" | "medium";
   containerWidth?: "full" | "contained";
 }
 
@@ -84,51 +76,106 @@ const {
   secondaryCta,
   contentPosition: directPosition,
   overlayOpacity: directOverlay,
-  minHeight: directHeight,
   containerWidth: directContainerWidth,
 } = Astro.props;
 
-// Prismic Link fields are objects { url: "..." }, not strings — extract the URL
 const getUrl = (link: any): string => {
   if (!link) return "#";
   if (typeof link === "string") return link;
   return prismic.asLink(link, { linkResolver }) || "#";
 };
 
-// Prismic Image fields use "url" not "src" — normalize for <img>
 const image = prismicImage
   ? { src: prismicImage.url || "", alt: prismicImage.alt || heading || "" }
   : { src: "", alt: "" };
 
-// Mobile responsive view from Prismic (900×1600 portrait crop)
 const mobileImageSrc = prismicImage?.mobile?.url || "";
 
-// Normalize logo image (optional)
 const logo = prismicLogo
   ? { src: prismicLogo.url || "", alt: prismicLogo.alt || "" }
   : null;
 
-// Only create button if label exists — prevents empty button rendering
 const primaryCta =
   directCta ||
   (button_label ? { label: button_label, href: getUrl(button_link) } : null);
 
 // ============================================================
-// 🎨 DEVELOPER SETTINGS — change these per client (Steps 1-4)
+// 🎨 DEVELOPER SETTINGS
 // ============================================================
-const contentPosition = directPosition || "bottom-right"; // Step 1 Options: "bottom-left" | "left" | "center" | "right" | "bottom-right"
-const minHeight = directHeight || "large "; // Step 2 Options: "large" (90vh) | "full" (100vh) | "medium" (70vh)
-const overlayOpacity = directOverlay ?? 0; // Step 3
-const containerWidth = directContainerWidth || "full"; // Step 4 Options: "full" (aligns with nav) | "contained" (1200px, matches other slices)
+const contentPosition = directPosition || "bottom-right";
+const overlayOpacity = directOverlay ?? 0;
+const containerWidth = directContainerWidth || "full";
 // ============================================================
+
+// ============================================================
+// Upcoming Events — fetched at build time, zero runtime cost
+// ============================================================
+const MAX_UPCOMING_EVENTS = 9;
+
+let upcomingEvents: {
+  title: string;
+  image: string;
+  imageAlt: string;
+  url: string;
+}[] = [];
+
+try {
+  const allEvents = await client.getAllByType("event", {
+    orderings: [{ field: "my.event.date", direction: "asc" }],
+  });
+
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+
+  upcomingEvents = allEvents
+    .filter((e) => {
+      if (!e.data.featured_image?.url) return false;
+      if (e.data.date) {
+        const start = new Date(e.data.date);
+        start.setHours(0, 0, 0, 0);
+        return start >= now;
+      }
+      return true;
+    })
+    .slice(0, MAX_UPCOMING_EVENTS)
+    .map((e) => ({
+      title: e.data.title || "Untitled",
+      image: `${e.data.featured_image.url.split("?")[0]}?auto=format&q=80&w=600`,
+      imageAlt: e.data.featured_image.alt || e.data.title || "",
+      url: e.url || `/events/${e.uid}`,
+    }));
+} catch (e) {
+  if (import.meta.env.DEV) {
+    console.warn("HeroHomepage: Failed to fetch upcoming events.", e);
+  }
+}
+
+// Desktop always needs exactly 3 columns filled.
+// 1 event → repeated 3×, 2 events → [A, B, A], 3 → as-is.
+// >3 → pad to a multiple of 3 so desktop pages are always full.
+let displayEvents = [...upcomingEvents];
+if (displayEvents.length === 1) {
+  displayEvents = [displayEvents[0], displayEvents[0], displayEvents[0]];
+} else if (displayEvents.length === 2) {
+  displayEvents = [displayEvents[0], displayEvents[1], displayEvents[0]];
+} else if (displayEvents.length > 3) {
+  while (displayEvents.length % 3 !== 0) {
+    displayEvents.push(
+      upcomingEvents[displayEvents.length % upcomingEvents.length],
+    );
+  }
+}
+
+const hasUpcomingEvents = upcomingEvents.length > 0;
+const uniqueCount = upcomingEvents.length;
 ---
 
 <section
   class:list={[
     "hero-homepage",
     `hero-homepage--${contentPosition}`,
-    `hero-homepage--${minHeight}`,
     `hero-homepage--container-${containerWidth}`,
+    hasUpcomingEvents && "hero-homepage--has-events",
   ]}
   style={`--overlay-opacity: ${overlayOpacity / 100}`}
 >
@@ -176,11 +223,176 @@ const containerWidth = directContainerWidth || "full"; // Step 4 Options: "full"
       }
     </div>
   </div>
+
+  {
+    hasUpcomingEvents && (
+      <button
+        type="button"
+        class="hero-homepage__events-toggle"
+        data-events-toggle
+        aria-expanded="false"
+        aria-controls="hero-events-panel"
+      >
+        <span data-events-toggle-text>Upcoming Events</span>
+      </button>
+    )
+  }
+
+  {
+    hasUpcomingEvents && (
+      <div
+        class="hero-homepage__events-panel"
+        id="hero-events-panel"
+        data-events-panel
+        aria-hidden="true"
+      >
+        <div
+          class="hero-homepage__events-track"
+          data-events-track
+          data-unique-count={String(uniqueCount)}
+        >
+          {displayEvents.map((event) => (
+            <a href={event.url} class="hero-homepage__event-card">
+              <img
+                src={event.image}
+                alt={event.imageAlt}
+                loading="lazy"
+                class="hero-homepage__event-image"
+              />
+            </a>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  {
+    hasUpcomingEvents && (
+      <button type="button" class="hero-homepage__events-nav hero-homepage__events-nav--prev" data-events-prev aria-label="Previous">&#8249;</button>
+    )
+  }
+  {
+    hasUpcomingEvents && (
+      <button type="button" class="hero-homepage__events-nav hero-homepage__events-nav--next" data-events-next aria-label="Next">&#8250;</button>
+    )
+  }
 </section>
+
+<script is:inline>
+  (function () {
+    var toggle = document.querySelector("[data-events-toggle]");
+    var panel = document.querySelector("[data-events-panel]");
+    var track = document.querySelector("[data-events-track]");
+    var prevBtn = document.querySelector("[data-events-prev]");
+    var nextBtn = document.querySelector("[data-events-next]");
+    if (!toggle || !panel || !track) return;
+
+    var isOpen = false;
+    var timer = null;
+    var currentPage = 0;
+    var uniqueCount = parseInt(track.dataset.uniqueCount) || 0;
+    var totalItems = track.children.length;
+
+    function perPage() {
+      return window.matchMedia("(min-width: 640px)").matches ? 3 : 1;
+    }
+
+    function totalPages() {
+      var pp = perPage();
+      return pp === 1 ? uniqueCount : Math.ceil(totalItems / pp);
+    }
+
+    function updateNav() {
+      var show = isOpen && totalPages() > 1;
+      if (prevBtn) prevBtn.style.display = show ? "flex" : "none";
+      if (nextBtn) nextBtn.style.display = show ? "flex" : "none";
+    }
+
+    function goTo(page) {
+      var pages = totalPages();
+      if (pages <= 0) return;
+      currentPage = ((page % pages) + pages) % pages;
+      track.style.transform = "translateX(-" + currentPage * 100 + "%)";
+    }
+
+    function advance() {
+      if (totalPages() <= 1) return;
+      goTo(currentPage + 1);
+    }
+
+    function startTimer() {
+      stopTimer();
+      if (totalPages() > 1) {
+        timer = setInterval(advance, 4000);
+      }
+    }
+
+    function stopTimer() {
+      if (timer) {
+        clearInterval(timer);
+        timer = null;
+      }
+    }
+
+    if (prevBtn) {
+      prevBtn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        goTo(currentPage - 1);
+        startTimer();
+      });
+    }
+    if (nextBtn) {
+      nextBtn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        goTo(currentPage + 1);
+        startTimer();
+      });
+    }
+
+    var touchX = 0;
+    track.addEventListener("touchstart", function (e) {
+      touchX = e.changedTouches[0].screenX;
+    }, { passive: true });
+    track.addEventListener("touchend", function (e) {
+      var dx = touchX - e.changedTouches[0].screenX;
+      if (Math.abs(dx) > 50) {
+        goTo(currentPage + (dx > 0 ? 1 : -1));
+        startTimer();
+      }
+    }, { passive: true });
+
+    window.addEventListener("resize", function () {
+      if (!isOpen) return;
+      var pages = totalPages();
+      if (currentPage >= pages) currentPage = Math.max(0, pages - 1);
+      track.style.transform = "translateX(-" + currentPage * 100 + "%)";
+      updateNav();
+    });
+
+    toggle.addEventListener("click", function () {
+      var hero = toggle.closest(".hero-homepage");
+      isOpen = !isOpen;
+      hero.classList.toggle("hero-homepage--events-open", isOpen);
+      toggle.setAttribute("aria-expanded", String(isOpen));
+      panel.setAttribute("aria-hidden", String(!isOpen));
+      toggle.querySelector("[data-events-toggle-text]").textContent = isOpen
+        ? "Close"
+        : "Upcoming Events";
+
+      if (isOpen) {
+        goTo(0);
+        startTimer();
+      } else {
+        stopTimer();
+      }
+      updateNav();
+    });
+  })();
+</script>
 
 <style>
   /* ============================================================
-     BASE STYLES (keep these)
+     BASE STYLES
      ============================================================ */
   .hero-homepage {
     position: relative;
@@ -188,6 +400,31 @@ const containerWidth = directContainerWidth || "full"; // Step 4 Options: "full"
     width: 100%;
     overflow: hidden;
     color: var(--color-bg);
+    margin-top: var(--header-height, 96px);
+  }
+
+  /* ============================================================
+     ASPECT RATIO — 4:5 mobile, 12:5 desktop
+     3 × (4:5) side-by-side with no gaps = 12:5
+     ============================================================ */
+  .hero-homepage--has-events {
+    aspect-ratio: 4 / 5;
+  }
+
+  @media (min-width: 640px) {
+    .hero-homepage--has-events {
+      aspect-ratio: 12 / 5;
+    }
+  }
+
+  .hero-homepage:not(.hero-homepage--has-events) {
+    aspect-ratio: 4 / 5;
+  }
+
+  @media (min-width: 640px) {
+    .hero-homepage:not(.hero-homepage--has-events) {
+      aspect-ratio: 12 / 5;
+    }
   }
 
   .hero-homepage__bg {
@@ -216,7 +453,7 @@ const containerWidth = directContainerWidth || "full"; // Step 4 Options: "full"
   }
 
   /* ============================================================
-     CENTERED LOGO (optional — from Prismic "logo" field)
+     CENTERED LOGO
      ============================================================ */
   .hero-homepage__logo {
     position: absolute;
@@ -253,6 +490,7 @@ const containerWidth = directContainerWidth || "full"; // Step 4 Options: "full"
     margin-inline: auto;
     padding: var(--space-16) var(--gutter);
     display: flex;
+    transition: opacity 0.3s ease;
   }
 
   @media (min-width: 768px) {
@@ -261,57 +499,35 @@ const containerWidth = directContainerWidth || "full"; // Step 4 Options: "full"
     }
   }
 
-  /* .hero-homepage__content {
-    max-width: 30ch;
-  } */
+  .hero-homepage--events-open .hero-homepage__container {
+    opacity: 0;
+    pointer-events: none;
+  }
 
   /* ============================================================
-     CONTAINER WIDTH VARIANTS (Step 4)
+     CONTAINER WIDTH VARIANTS
      ============================================================ */
-  /* Full — text aligns with nav/gutter (default) */
   .hero-homepage--container-full .hero-homepage__container {
     max-width: none;
   }
 
-  /* Contained — matches other slice widths (1200px) */
   .hero-homepage--container-contained .hero-homepage__container {
     max-width: var(--container-xl);
   }
 
   /* ============================================================
-     ACTIVE HEIGHT VARIANT (Step 4 — keep only ONE)
+     POSITION VARIANTS
      ============================================================ */
-  .hero-homepage--large {
-    min-height: 90vh;
-    min-height: 90dvh;
-  }
-
-  .hero-homepage--full {
-    min-height: 100vh;
-    min-height: 100dvh;
-  }
-
-  .hero-homepage--medium {
-    min-height: 70vh;
-  }
-
-  /* ============================================================
-     ACTIVE POSITION VARIANT (Step 4 — keep only ONE)
-     ============================================================ */
-
-  /* Bottom Left */
   .hero-homepage--bottom-left .hero-homepage__container {
     align-items: flex-end;
     justify-content: flex-start;
   }
 
-  /* Left (vertically centered) */
   .hero-homepage--left .hero-homepage__container {
     align-items: center;
     justify-content: flex-start;
   }
 
-  /* Center */
   .hero-homepage--center .hero-homepage__container {
     align-items: center;
     justify-content: center;
@@ -324,7 +540,6 @@ const containerWidth = directContainerWidth || "full"; // Step 4 Options: "full"
     justify-content: center;
   }
 
-  /* Right (vertically centered) */
   .hero-homepage--right .hero-homepage__container {
     align-items: center;
     justify-content: flex-end;
@@ -334,7 +549,6 @@ const containerWidth = directContainerWidth || "full"; // Step 4 Options: "full"
     justify-content: flex-end;
   }
 
-  /* Bottom Right — revert to simple version, no min() hack needed */
   .hero-homepage--bottom-right .hero-homepage__container {
     align-items: flex-end;
     justify-content: flex-end;
@@ -347,7 +561,6 @@ const containerWidth = directContainerWidth || "full"; // Step 4 Options: "full"
   /* ============================================================
      TYPOGRAPHY
      ============================================================ */
-  /* HEADING — allow long words to break */
   .hero-homepage__heading {
     font-family: var(--font-serif);
     font-size: clamp(var(--text-4xl), 7vw, var(--text-6xl));
@@ -379,5 +592,152 @@ const containerWidth = directContainerWidth || "full"; // Step 4 Options: "full"
     display: flex;
     gap: var(--space-4);
     flex-wrap: wrap;
+  }
+
+  /* ============================================================
+     EVENTS — TOGGLE BUTTON
+     ============================================================ */
+  .hero-homepage__events-toggle {
+    position: absolute;
+    bottom: var(--space-6);
+    right: var(--gutter);
+    z-index: 5;
+    font-family: var(--font-sans);
+    font-size: var(--text-xs);
+    font-weight: var(--font-medium);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-wider);
+    color: var(--color-bg);
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: var(--radius-full);
+    padding: var(--space-2) var(--space-4);
+    cursor: pointer;
+    transition: background var(--transition-fast);
+  }
+
+  @media (min-width: 768px) {
+    .hero-homepage__events-toggle {
+      bottom: var(--space-8);
+      right: var(--gutter-lg);
+    }
+  }
+
+  .hero-homepage__events-toggle:hover {
+    background: rgba(0, 0, 0, 0.6);
+  }
+
+  .hero-homepage--events-open .hero-homepage__events-toggle {
+    background: rgba(0, 0, 0, 0.4);
+  }
+
+  /* ============================================================
+     EVENTS — PANEL (edge-to-edge, no overlay/background)
+     ============================================================ */
+  .hero-homepage__events-panel {
+    position: absolute;
+    inset: 0;
+    z-index: 4;
+    overflow: hidden;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.4s ease;
+  }
+
+  .hero-homepage--events-open .hero-homepage__events-panel {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* ============================================================
+     EVENTS — TRACK (sliding strip, no gaps)
+     ============================================================ */
+  .hero-homepage__events-track {
+    display: flex;
+    height: 100%;
+    transition: transform 0.8s cubic-bezier(0.25, 0.1, 0.25, 1);
+  }
+
+  /* ============================================================
+     EVENTS — CARD (no radius, no gap, flush edge-to-edge)
+     ============================================================ */
+  .hero-homepage__event-card {
+    flex: 0 0 100%;
+    height: 100%;
+    display: block;
+  }
+
+  @media (min-width: 640px) {
+    .hero-homepage__event-card {
+      flex: 0 0 calc(100% / 3);
+    }
+  }
+
+  .hero-homepage__event-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: opacity var(--transition-fast);
+  }
+
+  .hero-homepage__event-card:hover .hero-homepage__event-image {
+    opacity: 0.8;
+  }
+
+  /* ============================================================
+     EVENTS — NAV BUTTONS (prev/next)
+     ============================================================ */
+  .hero-homepage__events-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 6;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    font-size: var(--text-lg);
+    color: var(--color-bg);
+    background: rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: var(--radius-full);
+    cursor: pointer;
+    padding: 0;
+    transition: background var(--transition-fast), opacity var(--transition-fast);
+    opacity: 0.7;
+  }
+
+  .hero-homepage__events-nav:hover {
+    background: rgba(0, 0, 0, 0.5);
+    opacity: 1;
+  }
+
+  .hero-homepage__events-nav--prev {
+    left: var(--space-3);
+  }
+
+  .hero-homepage__events-nav--next {
+    right: var(--space-3);
+  }
+
+  @media (min-width: 768px) {
+    .hero-homepage__events-nav {
+      width: 2.5rem;
+      height: 2.5rem;
+    }
+
+    .hero-homepage__events-nav--prev {
+      left: var(--space-6);
+    }
+
+    .hero-homepage__events-nav--next {
+      right: var(--space-6);
+    }
   }
 </style>
